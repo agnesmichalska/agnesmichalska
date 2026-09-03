@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Textiloop — Warsaw</title>
+
+<script>
+  var USE_MAPBOX = false;
+  var MAPBOX_TOKEN = 'PASTE_YOUR_TOKEN_HERE';
+  var MAPBOX_STYLE = 'mapbox://styles/mapbox/light-v11';
+</script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<link id="mapbox-css" rel="stylesheet" href="" disabled>
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --ink: #1a1714;
+  --cream: #f5f0e8;
+  --warm: #e8dfd0;
+  --accent: #c8553d;
+  --green: #3a6b4a;
+  --sand: #b89e7a;
+  --light: #faf7f2;
+  --border: rgba(26,23,20,0.12);
+  --muted: #7a6f64;
+  --radius: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { font-family: 'DM Sans', sans-serif; background: var(--light); color: var(--ink); min-height: 100%; }
+
+/* ── TOPBAR ─────────────────────────────────────────────────────────────────── */
+.topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 22px; height: 56px;
+  background: var(--ink); color: var(--cream);
+  position: sticky; top: 0; z-index: 1100;
+}
+.logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -.4px; display: flex; align-items: center; gap: 7px; }
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.topbar-search {
+  flex: 1; max-width: 420px;
+  display: flex; align-items: center;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+  border-radius: 8px; padding: 0 12px; gap: 8px;
+}
+.topbar-search input {
+  background: none; border: none; outline: none;
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  color: var(--cream); width: 100%; height: 34px;
+}
+.topbar-search input::placeholder { color: rgba(245,240,232,.45); }
+.topbar-search-icon { font-size: 14px; color: rgba(245,240,232,.45); flex-shrink: 0; }
+.topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+/* ── SUBNAV MODE TOGGLE ─────────────────────────────────────────────────────── */
+.sn-mode {
+  font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+  padding: 9px 28px; border: none; background: none; cursor: pointer;
+  color: var(--muted); border-bottom: 3px solid transparent;
+  transition: all .15s; display: flex; align-items: center; gap: 7px;
+}
+.sn-mode:hover { color: var(--ink); }
+.sn-mode.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* ── MAP MODE BUTTONS ───────────────────────────────────────────────────────── */
+.map-mode-btn {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  padding: 6px 16px; border: none; background: none; border-radius: 6px;
+  cursor: pointer; color: rgba(245,240,232,.6); transition: all .15s;
+}
+.map-mode-btn.active { background: var(--light); color: var(--ink); }
+.map-mode-btn:not(.active):hover { color: var(--cream); background: rgba(255,255,255,.1); }
+.btn-add {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  padding: 7px 15px; background: var(--accent); color: #fff;
+  border: none; border-radius: var(--radius); cursor: pointer; transition: opacity .15s;
+}
+.btn-add:hover { opacity: .85; }
+
+/* ── SUBNAV / TABS ──────────────────────────────────────────────────────────── */
+.subnav {
+  background: var(--cream); border-bottom: 1px solid var(--border);
+  position: sticky; top: 56px; z-index: 1000;
+}
+.subnav-inner {
+  max-width: 1180px; margin: 0 auto;
+  display: flex; align-items: center; gap: 0;
+  padding: 0 22px; overflow-x: auto; scrollbar-width: none;
+}
+.subnav-inner::-webkit-scrollbar { display: none; }
+.sn-tab {
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+  padding: 12px 16px; background: none; border: none; cursor: pointer;
+  color: var(--muted); white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: all .15s;
+  display: flex; align-items: center; gap: 7px;
+}
+.sn-tab:hover { color: var(--ink); }
+.sn-tab.active { color: var(--ink); font-weight: 700; border-bottom-color: var(--accent); }
+.sn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.subnav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; padding-left: 16px; flex-shrink: 0; }
+.view-toggle {
+  display: flex; background: var(--warm); border-radius: 8px; padding: 3px; gap: 2px;
+}
+.vt-btn {
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+  padding: 5px 12px; border: none; background: none; border-radius: 6px;
+  cursor: pointer; color: var(--muted); transition: all .15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.vt-btn.active { background: var(--light); color: var(--ink); box-shadow: 0 1px 4px rgba(26,23,20,.1); }
+
+/* ── PAGE BODY ──────────────────────────────────────────────────────────────── */
+.page-body {
+  max-width: 1180px; margin: 0 auto;
+  padding: 24px 22px;
+  display: flex; gap: 24px; align-items: flex-start;
+}
+
+/* ── FILTER SIDEBAR ─────────────────────────────────────────────────────────── */
+.filter-col { width: 230px; flex-shrink: 0; }
+.filter-box {
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.fb-head {
+  padding: 13px 15px 11px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .07em;
+}
+.fb-section { padding: 12px 15px; border-bottom: 1px solid var(--border); }
+.fb-section:last-child { border-bottom: none; }
+.fb-section-title {
+  font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em; color: var(--sand);
+  margin-bottom: 9px;
+}
+.sh-label {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; font-size: 13px; font-weight: 400;
+  color: var(--ink); user-select: none; padding: 3px 0;
+}
+.sh-label input[type="checkbox"] { display: none; }
+.sh-check-box {
+  width: 15px; height: 15px; border-radius: 4px; flex-shrink: 0;
+  border: 1.5px solid var(--border); background: var(--light);
+  display: flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.sh-label input:checked ~ .sh-check-box { background: var(--accent); border-color: var(--accent); }
+.sh-label input:checked ~ .sh-check-box::after {
+  content: ''; display: block; width: 4px; height: 7px;
+  border: 2px solid #fff; border-top: none; border-left: none;
+  transform: rotate(45deg) translate(-1px,-1px);
+}
+.sh-label input:checked ~ .sh-text { color: var(--accent); font-weight: 600; }
+.sf-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; text-align: left;
+  font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 400;
+  padding: 5px 7px; border-radius: 7px;
+  border: 1px solid transparent; background: transparent;
+  color: var(--ink); cursor: pointer; transition: all .12s;
+}
+.sf-btn:hover { background: var(--warm); }
+.sf-btn.on { background: var(--light); border-color: var(--border); font-weight: 600; color: var(--accent); }
+.sf-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sf-count { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+/* ── RESULTS COL ────────────────────────────────────────────────────────────── */
+.results-col { flex: 1; min-width: 0; }
+
+.results-header {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+}
+.results-heading { font-family: 'Syne', sans-serif; font-size: 19px; font-weight: 800; }
+.results-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.sort-select {
+  font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 500;
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 12px; background: var(--cream); color: var(--ink);
+  cursor: pointer; outline: none;
+}
+
+/* RESULTS SEARCH BAR */
+.results-search {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0 14px;
+  margin-bottom: 10px; transition: border-color .15s;
+}
+.results-search:focus-within { border-color: var(--sand); }
+.results-search-icon { font-size: 15px; color: var(--muted); flex-shrink: 0; }
+.results-search input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink);
+  height: 44px;
+}
+.results-search input::placeholder { color: var(--muted); }
+
+/* NOTICE BANNER */
+.notice-banner {
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12.5px; color: var(--muted); margin-bottom: 14px;
+}
+.notice-close { margin-left: auto; background: none; border: none; font-size: 15px; color: var(--muted); cursor: pointer; }
+
+/* ── MINI MAP CARD ───────────────────────────────────────────────────────────── */
+.mini-map-card {
+  width: 230px; flex-shrink: 0;
+  height: 160px; border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  overflow: hidden; cursor: pointer; position: relative;
+  box-shadow: 0 2px 10px rgba(26,23,20,.08);
+  transition: box-shadow .2s, transform .2s;
+  margin-top: 14px;
+}
+.mini-map-card:hover { box-shadow: 0 6px 22px rgba(26,23,20,.18); transform: translateY(-2px); }
+.mini-map-preview {
+  width: 100%; height: 100%;
+  background-color: #ddd8cc;
+  background-image:
+    linear-gradient(rgba(255,255,255,.45) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.45) 1px, transparent 1px),
+    linear-gradient(rgba(200,190,175,.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,190,175,.25) 1px, transparent 1px);
+  background-size: 42px 42px, 42px 42px, 8px 8px, 8px 8px;
+  position: relative;
+}
+.mini-map-preview::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(108deg, transparent 34%, rgba(250,247,242,.75) 34%, rgba(250,247,242,.75) 36.5%, transparent 36.5%),
+    linear-gradient(18deg, transparent 44%, rgba(250,247,242,.75) 44%, rgba(250,247,242,.75) 46.5%, transparent 46.5%),
+    linear-gradient(72deg, transparent 24%, rgba(250,247,242,.6) 24%, rgba(250,247,242,.6) 25.5%, transparent 25.5%),
+    linear-gradient(155deg, transparent 54%, rgba(250,247,242,.6) 54%, rgba(250,247,242,.6) 56%, transparent 56%);
+}
+.mini-map-preview::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle, #3a6b4a 3.5px, transparent 3.5px),
+    radial-gradient(circle, #185FA5 3.5px, transparent 3.5px),
+    radial-gradient(circle, #c8553d 5px, transparent 5px),
+    radial-gradient(circle, #534AB7 3px, transparent 3px),
+    radial-gradient(circle, #856404 3px, transparent 3px),
+    radial-gradient(circle, #993556 3px, transparent 3px),
+    radial-gradient(circle, #3a6b4a 3px, transparent 3px),
+    radial-gradient(circle, #185FA5 3px, transparent 3px),
+    radial-gradient(circle, #c8553d 3.5px, transparent 3.5px);
+  background-size: 100% 100%;
+  background-position:
+    28% 58%, 52% 42%, 46% 54%, 66% 34%, 57% 72%, 38% 28%, 72% 63%, 62% 48%, 33% 44%;
+  background-repeat: no-repeat;
+}
+.mini-map-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(26,23,20,.62) 0%, rgba(26,23,20,.08) 50%, transparent 100%);
+  display: flex; align-items: flex-end; padding: 11px 13px;
+  transition: background .2s;
+}
+.mini-map-card:hover .mini-map-overlay {
+  background: linear-gradient(to top, rgba(26,23,20,.75) 0%, rgba(26,23,20,.18) 55%, transparent 100%);
+}
+.mini-map-label {
+  display: flex; align-items: center; gap: 7px;
+  color: #fff; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0,0,0,.5); letter-spacing: .01em;
+}
+.mini-map-count {
+  margin-left: auto; background: rgba(255,255,255,.18); backdrop-filter: blur(4px);
+  border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 600;
+}
+
+/* ── FLOATING LIST BUTTON - removed, back button is in topbar now ── */
+
+.map-float-controls {
+  position: absolute; top: 10px; left: 10px; z-index: 900;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+}
+.map-float-toggle {
+  display: flex; background: var(--light);
+  border-radius: 8px; padding: 3px; gap: 2px;
+  box-shadow: 0 2px 8px rgba(26,23,20,.18); border: 1px solid var(--border);
+}
+.mft-btn {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  padding: 6px 14px; border: none; background: none; border-radius: 6px;
+  cursor: pointer; color: var(--muted); transition: all .15s;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.mft-btn.active { background: var(--ink); color: var(--cream); }
+.mft-btn:not(.active):hover { background: var(--warm); color: var(--ink); }
+.map-return-btn {
+  display: flex; align-items: center; gap: 9px;
+  font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800;
+  padding: 12px 20px; border: none; cursor: pointer;
+  background: var(--light); color: var(--ink);
+  border-radius: 10px; white-space: nowrap;
+  box-shadow: 0 2px 12px rgba(26,23,20,.18); border: 1px solid var(--border);
+  transition: all .18s; letter-spacing: .01em;
+}
+.map-return-btn:hover { background: var(--cream); box-shadow: 0 4px 18px rgba(26,23,20,.25); transform: translateY(-1px); }
+
+/* ── AD BANNER ──────────────────────────────────────────────────────────────── */
+.ad-banner {
+  width: 200px; flex-shrink: 0;
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow); align-self: flex-start;
+  position: sticky; top: 120px;
+}
+.ad-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 6px 10px 0; text-align: right; }
+.ad-inner { padding: 12px 14px 14px; }
+.ad-logo { font-size: 32px; text-align: center; margin-bottom: 6px; }
+.ad-brand { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; text-align: center; margin-bottom: 3px; }
+.ad-tagline { font-size: 11px; color: var(--accent); font-weight: 600; text-align: center; margin-bottom: 10px; }
+.ad-body { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+.ad-cta-row { display: flex; flex-direction: column; gap: 6px; }
+.ad-cta { background: var(--ink); color: var(--cream); border: none; border-radius: 7px; padding: 8px; font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; transition: opacity .15s; }
+.ad-cta:hover { opacity: .85; }
+.ad-addr { font-size: 11px; color: var(--muted); text-align: center; }
+.ad-footer { font-size: 10px; color: var(--muted); text-align: center; padding: 8px; border-top: 1px solid var(--border); background: var(--warm); }
+
+/* ── ASYSTENT ────────────────────────────────────────────────────────────────── */
+.asystent-page {
+  display: flex; flex-direction: column;
+  height: calc(100vh - 136px); min-height: 500px;
+}
+.asystent-bar { padding: 0 0 10px; flex-shrink: 0; }
+.asystent-bar-inner {
+  display: flex; gap: 10px; align-items: center;
+  background: var(--cream); border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 6px 6px 6px 18px;
+  transition: border-color .15s; box-shadow: 0 2px 12px rgba(26,23,20,.08);
+}
+.asystent-bar-inner:focus-within { border-color: var(--sand); }
+.asystent-input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink); height: 38px;
+}
+.asystent-input::placeholder { color: var(--muted); }
+.asystent-send {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--ink); color: var(--cream); border: none;
+  font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s; flex-shrink: 0;
+}
+.asystent-send:hover { background: var(--accent); }
+.asystent-hint { text-align: center; font-size: 11px; color: var(--muted); margin-top: 8px; opacity: .6; }
+.asystent-empty { flex: 1; }
+.asystent-messages { flex: 1; overflow-y: auto; padding: 20px 0; display: flex; flex-direction: column; gap: 20px; scrollbar-width: thin; }
+.ac-msg { display: flex; gap: 12px; align-items: flex-start; max-width: 680px; margin: 0 auto; width: 100%; }
+.ac-msg.ac-user { flex-direction: row-reverse; }
+.ac-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.ac-msg.ac-user .ac-avatar { background: var(--accent); }
+.ac-bubble { background: var(--cream); border: 1px solid var(--border); border-radius: 18px 18px 18px 4px; padding: 12px 16px; font-size: 14px; line-height: 1.6; color: var(--ink); max-width: 80%; }
+.ac-msg.ac-user .ac-bubble { background: var(--ink); color: var(--cream); border-color: transparent; border-radius: 18px 18px 4px 18px; }
+.ac-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s infinite; display: inline-block; margin: 0 2px; }
+.ac-dot:nth-child(2) { animation-delay: .2s; } .ac-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-7px)} }
+.mat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+.mat-card {
+  background: var(--light); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  cursor: pointer; transition: box-shadow .15s, border-color .15s;
+  display: flex; flex-direction: column;
+}
+.mat-card:hover { box-shadow: 0 4px 18px rgba(26,23,20,.12); border-color: var(--sand); }
+.mat-thumb {
+  width: 100%; aspect-ratio: 4/3;
+  background: var(--warm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; position: relative; overflow: hidden; flex-shrink: 0;
+}
+.mat-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mat-fav {
+  position: absolute; top: 8px; right: 8px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(250,247,242,.85); border: none;
+  font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px); transition: transform .15s;
+}
+.mat-fav:hover { transform: scale(1.2); }
+.mat-lt-badge {
+  position: absolute; top: 8px; left: 8px;
+  font-size: 10px; font-weight: 700; padding: 3px 8px;
+  border-radius: 6px; text-transform: uppercase; letter-spacing: .04em;
+  backdrop-filter: blur(4px);
+}
+.mat-body { padding: 12px 13px; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.mat-name { font-family: 'Syne', sans-serif; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.mat-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+.mat-tag { font-size: 10.5px; padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border); background: var(--cream); color: var(--muted); }
+.mat-addr { font-size: 11.5px; color: var(--muted); }
+.mat-foot { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; }
+.mat-price { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: var(--accent); }
+.mat-certs { display: flex; gap: 3px; }
+.mat-cert { font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 4px; background: var(--green); color: #fff; }
+.result-card {
+  background: var(--light); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 10px;
+  display: flex; overflow: hidden;
+  cursor: pointer; transition: box-shadow .15s, border-color .15s;
+}
+.result-card:hover { box-shadow: 0 4px 20px rgba(26,23,20,.1); border-color: var(--sand); }
+.rc-thumb {
+  width: 200px; flex-shrink: 0;
+  background: var(--warm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 44px; position: relative; overflow: hidden; min-height: 150px;
+}
+.rc-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.rc-fav {
+  position: absolute; top: 8px; right: 8px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(250,247,242,.85); border: none;
+  font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px); transition: transform .15s;
+}
+.rc-fav:hover { transform: scale(1.2); }
+.rc-body { flex: 1; padding: 16px 18px; display: flex; gap: 12px; min-width: 0; }
+.rc-main { flex: 1; min-width: 0; }
+.rc-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 7px; }
+.badge {
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+  white-space: nowrap; text-transform: uppercase; letter-spacing: .04em;
+}
+.b-sorting     { background:#d4edda; color:#155724; }
+.b-fabric      { background:#cce5ff; color:#004085; }
+.b-haberdashery{ background:#e2d9f3; color:#4a2e8c; }
+.b-designer    { background:#fde8e8; color:#8b1a1a; }
+.b-producer    { background:#fff3cd; color:#856404; }
+.b-bags        { background:#d1ecf1; color:#0c5460; }
+.b-offer       { background:#c8553d; color:#fff; }
+.b-krawcy      { background:#fce4f0; color:#8c1a57; }
+.b-szewcy      { background:#fde8d8; color:#7d4200; }
+.b-kaletnicy   { background:#ede0f7; color:#5b1a8c; }
+.b-hurtownie   { background:#d5f0eb; color:#0d5c4a; }
+.b-technicy    { background:#d6eaf8; color:#1a5276; }
+.b-szwalnie    { background:#d5f5e3; color:#1a5e3a; }
+.b-prod-tkanin { background:#eaecee; color:#424949; }
+.b-drukarnie   { background:#fadbd8; color:#7b241c; }
+.b-secondhand  { background:#e0f0e8; color:#1b5e20; }
+.rc-name {
+  font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+  color: var(--ink); margin-bottom: 4px; line-height: 1.3;
+}
+.rc-meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.rc-meta-sep { color: var(--border); }
+.rc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.rc-tag {
+  font-size: 11.5px; padding: 2px 8px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--cream); color: var(--muted);
+}
+.rc-desc { font-size: 12.5px; color: var(--muted); line-height: 1.55; font-style: italic; }
+.rc-right {
+  display: flex; flex-direction: column; align-items: flex-end;
+  text-align: right; width: 160px; flex-shrink: 0;
+}
+.rc-rating-block { display: flex; align-items: center; gap: 8px; }
+.rc-rating-label { font-size: 12px; font-weight: 600; color: var(--ink); }
+.rc-rating-num {
+  background: var(--ink); color: var(--cream);
+  width: 34px; height: 34px; border-radius: 8px 8px 8px 0;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.rc-reviews { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.rc-price-block { margin-top: auto; }
+.rc-price { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--ink); }
+.rc-price-note { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.rc-cta {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius); padding: 9px 16px;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  cursor: pointer; margin-top: 10px; width: 100%; transition: opacity .15s;
+}
+.rc-cta:hover { opacity: .88; }
+.rc-green { font-size: 11.5px; color: var(--green); font-weight: 600; margin-top: 5px; }
+
+/* SPONSORED */
+.sponsored-result {
+  background: var(--cream); border: 1.5px solid #f0d060;
+  border-radius: var(--radius); margin-bottom: 10px;
+  display: flex; overflow: hidden; cursor: pointer;
+  transition: box-shadow .15s; position: relative;
+}
+.sponsored-result:hover { box-shadow: 0 4px 20px rgba(26,23,20,.1); }
+.sponsored-tag {
+  position: absolute; top: 10px; right: 10px;
+  background: #fff3cd; color: #856404; font-size: 9px; font-weight: 700;
+  padding: 2px 7px; border-radius: 5px; text-transform: uppercase; letter-spacing: .06em;
+}
+
+/* LOAD MORE */
+.load-more-wrap { text-align: center; padding: 18px 0; }
+.btn-load-more {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  background: none; border: 1.5px solid var(--ink); color: var(--ink);
+  padding: 10px 28px; border-radius: var(--radius); cursor: pointer; transition: all .15s;
+}
+.btn-load-more:hover { background: var(--ink); color: var(--cream); }
+
+/* ── MAP FULL SCREEN ────────────────────────────────────────────────────────── */
+.map-full { position: fixed; inset: 0; z-index: 1050; display: none; flex-direction: column; }
+.map-full.active { display: flex; }
+.map-topbar {
+  background: var(--ink); color: var(--cream);
+  padding: 10px 18px; display: flex; align-items: center; gap: 14px;
+  flex-shrink: 0;
+}
+.map-back {
+  background: none; border: 1px solid rgba(255,255,255,.3); color: var(--cream);
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  padding: 6px 14px; border-radius: 7px; cursor: pointer; transition: all .15s;
+}
+.map-back:hover { background: rgba(255,255,255,.1); }
+.map-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+.map-subnav {
+  background: var(--cream); border-bottom: 1px solid var(--border);
+  display: flex; flex-shrink: 0; justify-content: flex-start;
+}
+.map-sn-tab {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  padding: 6px 16px; border: none; background: none; border-radius: 6px;
+  cursor: pointer; color: rgba(245,240,232,.6); transition: all .15s;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.map-sn-tab.active { background: var(--light); color: var(--ink); }
+.map-sn-tab:not(.active):hover { color: var(--cream); background: rgba(255,255,255,.1); }
+.map-layout { flex: 1; display: flex; overflow: hidden; }
+.map-sidebar {
+  width: 340px; flex-shrink: 0; overflow-y: auto;
+  background: var(--light); border-right: 1px solid var(--border);
+  scrollbar-width: thin; scrollbar-color: var(--warm) transparent;
+}
+.map-search { padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.map-search { padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.map-search input {
+  width: 100%; padding: 7px 11px; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 8px;
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  background: var(--cream); color: var(--ink); outline: none;
+}
+.map-search input:focus { border-color: var(--sand); }
+.map-list-item {
+  padding: 11px 13px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .12s;
+}
+.map-list-item:hover { background: var(--warm); }
+.map-list-item.sel { background: var(--cream); }
+.map-cat-filters { padding: 8px 10px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 5px; }
+.map-cat-chip { font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; cursor: pointer; border: 1.5px solid var(--border); background: var(--cream); color: var(--muted); transition: all .15s; display: flex; align-items: center; gap: 5px; }
+.map-cat-chip .chip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.map-cat-chip.active { border-color: transparent; color: #fff; }
+.map-cat-chip:not(.active):hover { border-color: var(--sand); color: var(--ink); }
+.ml-name { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.ml-addr { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+.ml-foot { display: flex; align-items: center; gap: 8px; }
+.ml-rating { font-size: 11px; color: var(--sand); font-weight: 600; }
+.ml-price { font-size: 12px; font-weight: 600; color: var(--accent); }
+#map-container { flex: 1; position: relative; overflow: hidden; }
+#map-leaflet { width: 100%; height: 100%; }
+
+/* MAP LEGEND */
+.map-legend {
+  position: absolute; bottom: 20px; left: 12px;
+  background: rgba(250,247,242,.95); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 13px; z-index: 800;
+  backdrop-filter: blur(8px);
+}
+.legend-title { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 7px; }
+.leg-row { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; font-size: 11px; color: var(--muted); }
+.leg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── DETAIL SLIDE-OVER ──────────────────────────────────────────────────────── */
+.detail-overlay { position: fixed; inset: 0; background: rgba(26,23,20,.4); z-index: 2000; display: none; align-items: flex-start; justify-content: flex-end; }
+.detail-overlay.open { display: flex; }
+.detail-panel {
+  width: 400px; max-width: 95vw; height: 100vh;
+  background: var(--light); box-shadow: -4px 0 30px rgba(26,23,20,.18);
+  overflow-y: auto; display: flex; flex-direction: column;
+  animation: slideIn .22s ease; scrollbar-width: thin; scrollbar-color: var(--warm) transparent;
+}
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.dp-header {
+  padding: 15px 16px 13px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--light); z-index: 1;
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.dp-close {
+  width: 24px; height: 24px; border: none; background: var(--warm);
+  border-radius: 50%; cursor: pointer; font-size: 13px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .12s;
+}
+.dp-close:hover { background: var(--border); }
+.dp-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; padding-right: 10px; line-height: 1.3; }
+.dp-body { padding: 16px; flex: 1; }
+.dp-section { margin-bottom: 18px; }
+.dp-sec-title { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--sand); margin-bottom: 9px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.dp-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; font-size: 12.5px; gap: 8px; }
+.dp-label { color: var(--muted); flex-shrink: 0; }
+.dp-value { font-weight: 500; text-align: right; }
+.dp-notes { font-size: 12.5px; color: var(--muted); font-style: italic; line-height: 1.55; }
+.dp-photo { width: 100%; border-radius: 8px; margin-bottom: 12px; object-fit: cover; max-height: 200px; display: block; }
+.cert-pill { display: inline-block; background: var(--green); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; margin: 2px; }
+.cert-pill.none { background: var(--muted); }
+.dp-cta {
+  background: var(--accent); color: #fff; border: none; width: 100%;
+  padding: 12px; border-radius: var(--radius); font-family: 'Syne', sans-serif;
+  font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 4px; transition: opacity .15s;
+}
+.dp-cta:hover { opacity: .86; }
+
+/* ── MODAL ──────────────────────────────────────────────────────────────────── */
+.overlay { position: fixed; inset: 0; background: rgba(26,23,20,.6); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 16px; }
+.overlay.open { display: flex; }
+.modal { background: var(--light); border-radius: 16px; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(26,23,20,.25); scrollbar-width: thin; scrollbar-color: var(--warm) transparent; }
+.modal::-webkit-scrollbar { width: 3px; }
+.modal::-webkit-scrollbar-thumb { background: var(--warm); }
+.mh { display: flex; justify-content: space-between; align-items: center; padding: 20px 22px 14px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--light); z-index: 1; }
+.m-title { font-family: 'Syne', sans-serif; font-size: 19px; font-weight: 800; }
+.m-close { width: 28px; height: 28px; border: none; background: var(--warm); border-radius: 50%; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.mbody { padding: 18px 22px 22px; }
+.f-sec { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin: 20px 0 12px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.f-grp { margin-bottom: 13px; }
+.f-lbl { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+.f-lbl em { color: var(--accent); font-style: normal; }
+.f-in, .f-sel, .f-ta { width: 100%; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: var(--cream); color: var(--ink); outline: none; transition: border-color .15s; }
+.f-in:focus, .f-sel:focus, .f-ta:focus { border-color: var(--sand); }
+.f-ta { resize: vertical; min-height: 65px; }
+.f-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.f-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.certs { display: flex; gap: 6px; flex-wrap: wrap; }
+.cert-opt { display: flex; align-items: center; gap: 5px; font-size: 12px; cursor: pointer; padding: 5px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--cream); transition: all .12s; }
+.cert-opt input { width: 12px; height: 12px; accent-color: var(--accent); }
+.radio-wrap { display: flex; gap: 8px; flex-wrap: wrap; }
+.r-opt { display: flex; align-items: center; gap: 5px; font-size: 12.5px; cursor: pointer; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; transition: all .12s; background: var(--cream); }
+.r-opt input { display: none; }
+.r-opt.on { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.btn-sub { width: 100%; padding: 12px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--radius); font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity .15s; margin-top: 18px; letter-spacing: .02em; }
+.btn-sub:hover { opacity: .84; }
+.photo-upload-area { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 18px 14px; text-align: center; cursor: pointer; transition: all .15s; background: var(--cream); }
+.photo-upload-area:hover, .photo-upload-area.drag-over { border-color: var(--sand); background: var(--warm); }
+.photo-upload-icon { font-size: 22px; margin-bottom: 5px; }
+.photo-upload-text { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 2px; }
+.photo-upload-hint { font-size: 11px; color: var(--muted); }
+.photo-previews { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.photo-thumb { position: relative; width: 72px; height: 72px; }
+.photo-thumb img { width: 72px; height: 72px; object-fit: cover; border-radius: 7px; border: 1px solid var(--border); display: block; }
+.photo-thumb-del { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #fff; border: none; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; line-height: 1; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--green); color: #fff; padding: 11px 20px; border-radius: 10px; font-size: 13.5px; font-weight: 500; z-index: 9999; transition: transform .3s ease; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.err { background: #8b1a1a; }
+
+/* LEAFLET */
+.leaflet-popup-content-wrapper { border-radius: 10px !important; font-family: 'DM Sans', sans-serif; box-shadow: 0 4px 20px rgba(0,0,0,.15) !important; }
+.leaflet-popup-content { margin: 14px 16px !important; }
+.popup-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+.popup-cat { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+.popup-addr { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.popup-btn { display: inline-block; padding: 5px 12px; background: var(--ink); color: var(--cream); border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo"><span class="logo-dot"></span>Textiloop</div>
+  <div class="topbar-right">
+    <button class="btn-add" onclick="openModal()">+ Add listing</button>
+  </div>
+</div>
+
+<!-- SUBNAV — mode toggle only -->
+<div class="subnav" id="subnav-bar">
+  <div class="subnav-inner">
+    <button class="sn-mode active" id="sn-lokale" onclick="setMode('lokale')">🏪 Venues</button>
+    <button class="sn-mode" id="sn-materialy" onclick="setMode('materialy')">🧵 Materials</button>
+    <button class="sn-mode" id="sn-asystent" onclick="setMode('asystent')">✨ Assistant</button>
+  </div>
+</div>
+
+<!-- PAGE BODY -->
+<div class="page-body">
+  <!-- AD BANNER -->
+  <div class="ad-banner" id="ad-banner">
+    <div class="ad-label">Ad</div>
+    <div class="ad-inner">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:8px">Brand XYZ</div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;text-align:center;line-height:1.2;margin-bottom:4px">New Spring<br>Summer<br>Collection</div>
+      <div style="width:32px;height:2px;background:var(--accent);margin:10px auto"></div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:14px;font-style:italic">Made in Poland</div>
+      <button class="ad-cta">Shop Online</button>
+    </div>
+    <div class="ad-footer">Want to advertise here? <a href="#" style="color:var(--accent);font-weight:700">Get in touch</a></div>
+  </div>
+  <!-- LEFT COLUMN: sidebar + mini-map -->
+  <div id="left-col" style="display:flex;flex-direction:column;gap:0;flex-shrink:0;width:230px">
+
+    <!-- FILTER SIDEBAR — LOKALE -->
+    <div class="filter-col" id="sidebar-lokale" style="width:100%">
+      <div class="filter-box">
+        <div class="fb-head">Filter</div>
+        <div class="fb-section">
+          <div class="fb-section-title">Rating</div>
+          <label class="sh-label"><input type="checkbox" id="r45-toggle" onchange="renderResults()"><span class="sh-check-box"></span><span class="sh-text">★ 4.5 and above</span></label>
+          <label class="sh-label" style="margin-top:5px"><input type="checkbox" id="r40-toggle" onchange="renderResults()"><span class="sh-check-box"></span><span class="sh-text">★ 4.0 and above</span></label>
+        </div>
+        <div class="fb-section">
+          <div class="fb-section-title">Venue type</div>
+          <div id="sf-grid" style="display:flex;flex-direction:column;gap:2px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTER SIDEBAR — MATERIAŁY -->
+    <div class="filter-col" id="sidebar-materialy" style="display:none;width:100%">
+      <div class="filter-box">
+        <div class="fb-head">Filter</div>
+        <div class="fb-section">
+          <div class="fb-section-title">Listing type</div>
+          <label class="sh-label"><input type="checkbox" id="sh-toggle" onchange="renderResults()"><span class="sh-check-box"></span><span class="sh-text">Secondhand & deadstock</span></label>
+          <label class="sh-label" style="margin-top:5px"><input type="checkbox" id="free-toggle" onchange="renderResults()"><span class="sh-check-box"></span><span class="sh-text">Free & barter</span></label>
+          <label class="sh-label" style="margin-top:5px"><input type="checkbox" id="wanted-toggle" onchange="renderResults()"><span class="sh-check-box"></span><span class="sh-text">Wanted</span></label>
+        </div>
+        <div class="fb-section">
+          <div class="fb-section-title">Certifications</div>
+          <label class="sh-label"><input type="checkbox" id="gots-toggle" onchange="renderResults()"><span class="sh-check-box"></span><span class="sh-text">GOTS</span></label>
+          <label class="sh-label" style="margin-top:5px"><input type="checkbox" id="oeko-toggle" onchange="renderResults()"><span class="sh-check-box"></span><span class="sh-text">OEKO-TEX</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- MINI MAP PREVIEW — always visible -->
+    <div class="mini-map-card" onclick="setView('map')" id="mini-map-card" style="width:100%;margin-top:14px">
+      <div class="mini-map-preview" id="mini-map-preview"></div>
+      <div class="mini-map-overlay">
+        <div class="mini-map-label">
+          <span>🗺</span>
+          <span id="mini-map-label-text">Pokaż na mapie</span>
+          <span class="mini-map-count" id="mini-map-count"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-col">
+    <div class="results-header">
+      <div>
+        <div class="results-heading" id="results-heading">Warszawa: oferty tekstylne</div>
+        <div class="results-sub" id="results-sub"></div>
+      </div>
+      <select class="sort-select" id="sort-select" onchange="renderResults()">
+        <option value="recommended">Best match</option>
+        <option value="rating">Highest rated</option>
+        <option value="reviews">Most reviewed</option>
+        <option value="name">Name A–Z</option>
+      </select>
+    </div>
+
+    <div class="results-search" id="results-search">
+      <span class="results-search-icon">🔍</span>
+      <input id="q" type="text" placeholder="Search venues, locations…" oninput="renderResults()">
+    </div>
+
+    <div class="notice-banner" id="notice-banner">
+      <span>ℹ️</span>
+      <span>Some listings may be unavailable — contact the seller to confirm availability.</span>
+      <button class="notice-close" onclick="document.getElementById('notice-banner').style.display='none'">✕</button>
+    </div>
+
+    <div id="results-list"></div>
+    <div id="materialy-grid" style="display:none"></div>
+
+    <!-- ASYSTENT PANEL -->
+    <div id="asystent-panel" style="display:none">
+      <div class="asystent-page">
+        <div class="asystent-bar">
+          <div class="asystent-bar-inner">
+            <input class="asystent-input" id="asystent-input" type="text" placeholder="How can I help your brand today?" onkeydown="if(event.key==='Enter') mockAsk()">
+            <button class="asystent-send" onclick="mockAsk()">↑</button>
+          </div>
+          <div class="asystent-hint">AI Assistant — prototype, coming soon</div>
+        </div>
+        <div class="asystent-messages" id="asystent-chat" style="display:none"></div>
+        <div class="asystent-empty" id="asystent-empty"></div>
+      </div>
+    </div>
+
+    <div class="load-more-wrap" id="load-more-wrap" style="display:none">
+      <button class="btn-load-more" onclick="loadMore()">Show more results</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAP FULL SCREEN -->
+<div class="map-full" id="map-full">
+  <div class="map-topbar">
+    <button class="map-back" onclick="setView('list')">← Back to list</button>
+    <div class="map-title">Textiloop — Warsaw</div>
+    <div style="font-size:12px;color:rgba(245,240,232,.55);margin-left:8px" id="map-count"></div>
+  </div>
+  <div class="map-layout">
+    <div class="map-sidebar">
+      <div class="map-search">
+        <input type="text" id="map-search-input" placeholder="Search on map…" oninput="renderMapList(this.value)">
+      </div>
+      <div class="map-cat-filters" id="map-cat-filters"></div>
+      <div id="map-sidebar-list"></div>
+    </div>
+    <div id="map-container">
+      <div id="map-leaflet"></div>
+      <div class="map-float-controls">
+        <div class="map-float-toggle">
+          <button class="mft-btn active" id="map-mode-lokale" onclick="setMode('lokale')">🏪 Venues</button>
+          <button class="mft-btn" id="map-mode-materialy" onclick="setMode('materialy')">🧵 Materials</button>
+        </div>
+        <button class="map-return-btn" onclick="setView('list')">← Back to list</button>
+      </div>
+      <div class="map-legend">
+        <div class="legend-title">Category</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#3a6b4a"></div>Sorting & Recycling</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#185FA5"></div>Fabric Shop</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#534AB7"></div>Haberdashery</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#d4488a"></div>Tailors</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#e67e22"></div>Cobblers</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#8e44ad"></div>Leather Workshops</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#16a085"></div>Wholesalers</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#2980b9"></div>Sewing Machine Repair</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#27ae60"></div>Sewing Workshops</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#7f8c8d"></div>Prod. tkanin</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#c0392b"></div>Drukarnie</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#993556"></div>Designers</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#856404"></div>Clothing Producers</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#c8553d"></div>Oferta tekstylna</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL SLIDE-OVER -->
+<div class="detail-overlay" id="detail-overlay" onclick="handleOverlayClick(event)">
+  <div class="detail-panel">
+    <div class="dp-header">
+      <div>
+        <div class="dp-name" id="dp-name"></div>
+        <div id="dp-badges" style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap"></div>
+      </div>
+      <button class="dp-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="dp-body" id="dp-body"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="mh">
+      <div class="m-title">Add Textile Listing</div>
+      <button class="m-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="f-sec">Material Information</div>
+      <div class="f-grp">
+        <label class="f-lbl">Material type <em>*</em></label>
+        <select class="f-sel" id="fm-material">
+          <option value="">Select…</option>
+          <option>Fleece</option><option>Plush</option><option>Jersey</option><option>Polyester</option>
+          <option>Corduroy</option><option>Polar fleece</option><option>Wool</option><option>Velvet</option>
+          <option>Satin</option><option>Spandex</option><option>Rayon</option><option>Viscose</option>
+          <option>Tweed</option><option>Silk</option><option>Faux fur</option><option>Fur</option>
+          <option>Denim</option><option>Plaid</option><option>Knit</option><option>Leather</option>
+          <option>Piqué</option><option>Suede</option><option>Batiste</option><option>Cotton</option><option>Organic Cotton</option>
+          <option>Neoprene</option><option>Nylon</option><option>Broadcloth</option><option>Jacquard</option>
+          <option>Poplin</option><option>Canvas</option><option>Chiffon</option>
+          <option>Flannel</option><option>Linen</option><option>Felt</option>
+          <option value="Other">Other (specify)</option>
+        </select>
+      </div>
+      <div class="f-grp" id="fm-material-other-wrap" style="display:none;margin-top:-8px">
+        <input class="f-in" id="fm-material-other" placeholder="Specify material type…">
+      </div>
+      <div class="f-grp"><label class="f-lbl">Composition</label><input class="f-in" id="fm-comp" placeholder="80% cotton, 20% poliester"></div>
+      <div class="f-row2">
+        <div class="f-grp"><label class="f-lbl">Country of origin</label><input class="f-in" id="fm-origin" placeholder="Poland"></div>
+        <div class="f-grp"><label class="f-lbl">Colour / pattern</label><input class="f-in" id="fm-colour" placeholder="e.g. navy, ecru stripes"></div>
+      </div>
+      <div class="f-row2">
+        <div class="f-grp"><label class="f-lbl">GSM (g/m²)</label><input class="f-in" type="number" id="fm-gsm" placeholder="180"></div>
+        <div class="f-grp"><label class="f-lbl">Weight class</label>
+          <select class="f-sel" id="fm-gsm-class">
+            <option value="">Auto / unknown</option><option>Light (&lt;150)</option>
+            <option>Medium (150–300)</option><option>Heavy (300–500)</option><option>Very heavy (&gt;500)</option>
+          </select>
+        </div>
+      </div>
+      <div class="f-grp">
+        <label class="f-lbl">Photos</label>
+        <div class="photo-upload-area" id="photo-drop" onclick="document.getElementById('fm-photos').click()" ondragover="photoDragOver(event)" ondrop="photoDrop(event)">
+          <div class="photo-upload-icon">📷</div>
+          <div class="photo-upload-text">Click to add or drag & drop</div>
+          <div class="photo-upload-hint">JPG, PNG, WEBP — up to 5 photos</div>
+          <input type="file" id="fm-photos" accept="image/*" multiple style="display:none" onchange="handlePhotos(this.files)">
+        </div>
+        <div class="photo-previews" id="photo-previews"></div>
+      </div>
+      <div class="f-grp">
+        <label class="f-lbl">Certifications</label>
+        <div class="certs">
+          <label class="cert-opt"><input type="checkbox" value="GOTS"> GOTS</label>
+          <label class="cert-opt"><input type="checkbox" value="OEKO-TEX"> OEKO-TEX</label>
+          <label class="cert-opt"><input type="checkbox" value="Bluesign"> Bluesign</label>
+          <label class="cert-opt"><input type="checkbox" value="Fairtrade"> Fairtrade</label>
+          <label class="cert-opt"><input type="checkbox" value="C2C"> C2C</label>
+          <label class="cert-opt"><input type="checkbox" value="None"> None</label>
+        </div>
+      </div>
+      <div class="f-grp"><label class="f-lbl">DPP No.</label><input class="f-in" id="fm-dpp" placeholder="DPP-2025-PL-00431"></div>
+      <div class="f-sec">Quantity i wymiary</div>
+      <div class="f-row3">
+        <div class="f-grp"><label class="f-lbl">Width (cm)</label><input class="f-in" type="number" id="fm-w" placeholder="140"></div>
+        <div class="f-grp"><label class="f-lbl">Length (m)</label><input class="f-in" type="number" id="fm-l" placeholder="5"></div>
+        <div class="f-grp"><label class="f-lbl">Waga (kg)</label><input class="f-in" type="number" id="fm-wt" placeholder="2.5"></div>
+      </div>
+      <div class="f-grp"><label class="f-lbl">Quantity / opis</label><input class="f-in" id="fm-qty" placeholder="np. 3 rolki, ok. 45 m łącznie"></div>
+      <div class="f-sec">Listing Details</div>
+      <div class="f-grp"><label class="f-lbl">Listing title <em>*</em></label><input class="f-in" id="fm-title" placeholder="Tkanina bawełniana deadstock, granat"></div>
+      <div class="f-grp"><label class="f-lbl">Description</label><textarea class="f-ta" id="fm-desc" placeholder="Stan, historia, zastosowanie…"></textarea></div>
+      <div class="f-grp"><label class="f-lbl">Address / Location <em>*</em></label><input class="f-in" id="fm-addr" placeholder="Street, postcode, Warsaw"></div>
+      <div class="f-grp"><label class="f-lbl">Contact (email or mobile number)</label><input class="f-in" id="fm-contact" placeholder="email@example.com"></div>
+      <div class="f-grp">
+        <label class="f-lbl">Listing type <em>*</em></label>
+        <div class="radio-wrap" id="rtype">
+          <label class="r-opt on"><input type="radio" name="rt" value="sell" checked> For sale</label>
+          <label class="r-opt"><input type="radio" name="rt" value="swap"> Swap</label>
+          <label class="r-opt"><input type="radio" name="rt" value="free"> Free</label>
+          <label class="r-opt"><input type="radio" name="rt" value="wanted"> Wanted</label>
+        </div>
+      </div>
+      <div id="price-row" class="f-row2">
+        <div class="f-grp"><label class="f-lbl">Price (PLN)</label><input class="f-in" type="number" id="fm-price" placeholder="0"></div>
+        <div class="f-grp"><label class="f-lbl">Per</label>
+          <select class="f-sel" id="fm-per"><option>per metre</option><option>per kg</option><option>total</option><option>per piece</option></select>
+        </div>
+      </div>
+      <div id="swap-row" class="f-grp" style="display:none"><label class="f-lbl">Swap preferences</label><input class="f-in" id="fm-swap" placeholder="Looking for linen or organic cotton"></div>
+      <button class="btn-sub" onclick="submitOffer()">Publish listing</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Diacritic-insensitive search helper ────────────────────────────────────
+function norm(s) {
+  return (s||'').toLowerCase()
+    .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e')
+    .replace(/ł/g,'l').replace(/ń/g,'n').replace(/ó/g,'o')
+    .replace(/ś/g,'s').replace(/ź/g,'z').replace(/ż/g,'z');
+}
+function normWordMatch(text, q) {
+  var nt = norm(text), nq = norm(q);
+  var re = new RegExp('(^|[^a-z])' + nq.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '([^a-z]|$)');
+  return re.test(nt);
+}
+
+var OFFER_PHOTOS = {
+  'o1': 'https://images1.vinted.net/t/06_0046d_oscYCdkfYgRiGuqpukWXkANJ/f800/1777310267.webp?s=5ce2a1ac99494bbd2c67c84a7edc8548369280a4',
+  'o2': 'https://images1.vinted.net/t/01_02691_56iHpsyW4mCnEPfMGKZ3aKe1/f800/1771183530.webp?s=b8bb8394fc4c3f5f233205de3ec3a1389316d946',
+  'o19': 'https://images1.vinted.net/t/06_01430_ZDvXXYqer3bacyuEqsNNCYXf/f800/1780822732.webp?s=4391099f162033ac289c4556271b1bc581870ffc',
+  'o20': 'https://images1.vinted.net/t/05_00e99_fouVDpHnJVMvBdqLn7ajvrRi/f800/1780560270.webp?s=ccc3d12b8ec19b4c4686290b2ff4f64f40e084e4',
+  'o21': 'https://images1.vinted.net/t/04_02182_gqKac5TBQ8jQyfohx6DYDo8m/f800/1780818210.webp?s=b375e8b9af5038da21595e33ccf8f1313efa527f',
+  'o22': 'https://images1.vinted.net/t/03_015b0_ZdDC2xFb34xFfF9KQrXvKe3s/f800/1780672826.webp?s=dd2580e934609a410d83e15e65996a466d8ea85d'
+};
+var PLACE_PHOTOS = {
+  'h2': 'https://lh4.googleusercontent.com/proxy/XHL6nG-hmawP8euW8ntKhM6G8Fa20AWAPJ9jwji9eEuYmcL0n_wslDnIPEqUcnJneIPd755iyeFKdIpfdLKj7HhFn1A'
+};
+var CAT_COLOR = { sorting:'#3a6b4a', fabric:'#185FA5', haberdashery:'#534AB7', designer:'#993556', producer:'#856404', bags:'#0c5460', offer:'#c8553d', krawcy:'#d4488a', szewcy:'#e67e22', kaletnicy:'#8e44ad', hurtownie:'#16a085', technicy:'#2980b9', szwalnie:'#27ae60', producenci_tkanin:'#7f8c8d', drukarnie:'#c0392b' };
+var CAT_LABEL = { sorting:'Sorting & Recycling', fabric:'Fabric Shop', haberdashery:'Haberdashery', designer:'Designers', producer:'Clothing Producers', bags:'Torby i akcesoria', offer:'Oferta tekstylna', krawcy:'Tailors', szewcy:'Cobblers', kaletnicy:'Leather Workshops', hurtownie:'Wholesalers', technicy:'Sewing Machine Repair', szwalnie:'Sewing Workshops', producenci_tkanin:'Fabric Producers', drukarnie:'Drukarnie tkanin i hafciarnie' };
+var CAT_BADGE = { sorting:'b-sorting', fabric:'b-fabric', haberdashery:'b-haberdashery', designer:'b-designer', producer:'b-producer', bags:'b-bags', offer:'b-offer', krawcy:'b-krawcy', szewcy:'b-szewcy', kaletnicy:'b-kaletnicy', hurtownie:'b-hurtownie', technicy:'b-technicy', szwalnie:'b-szwalnie', producenci_tkanin:'b-prod-tkanin', drukarnie:'b-drukarnie' };
+var CAT_EMOJI = { sorting:'♻️', fabric:'🏪', haberdashery:'🧶', designer:'👗', producer:'✂️', bags:'👜', offer:'🏷️', krawcy:'🪡', szewcy:'👟', kaletnicy:'👜', hurtownie:'🏢', technicy:'🔧', szwalnie:'🪢', producenci_tkanin:'🏭', drukarnie:'🖨️' };
+
+var DB = [
+  {id:'s1',cat:'sorting',name:'VIVE Textile Recycling',addr:'Łopuszańska 22, 02-220 Warsaw',hours:'Mon–Fri 7–17',phone:'+48 22 868 46 26',rating:4.6,reviews:318,notes:'Large sorting facility, accepts clothing donations',lat:52.1972,lng:20.9454,secondhand:false},
+  {id:'s2',cat:'sorting',name:'Wtórpol Textile Sorting',addr:'Annopol 4A, 03-236 Warsaw',hours:'Mon–Fri 8–16',phone:'+48 22 811 58 06',rating:4.2,reviews:31,notes:'Przemysłowe sortowanie tekstyliów, sprzedaż posortowanych bel',lat:52.2847,lng:21.0472,secondhand:false},
+  {id:'f2',cat:'fabric',name:'Fabric Shop — Firany, zasłony, tkaniny dekoracyjne',addr:'Puławska 116, 02-620 Warszawa',hours:null,phone:null,rating:4.6,reviews:50,notes:'Fabric Shop, firany, zasłony i tkaniny dekoracyjne, Mokotów',lat:52.1880,lng:21.0230,secondhand:false},
+  {id:'f6',cat:'fabric',name:'KEY Fabrics — Włoskie tkaniny',addr:'Al. Solidarności 113/LU3, Warszawa',hours:'Mon–Fri 10–17, Sb 10–15',phone:null,rating:null,reviews:null,notes:'Sklep specjalizujący się w wysokiej jakości włoskich tkaninach. Idealne placese na materiały premium na garnitury, sukienki czy płaszcze.',lat:52.2480,lng:21.0050,secondhand:false},
+  {id:'f7',cat:'fabric',name:'Mimoza Tkaniny',addr:'ul. Józefa Bellottiego 3, Warszawa',hours:'Mon–Fri 10–18, Sb 10–15',phone:null,rating:null,reviews:null,notes:'Well-stocked shop with a wide range of sewing fabrics and patterns.',lat:52.2560,lng:20.9880,secondhand:false},
+  {id:'f8',cat:'fabric',name:'Lena — tkaniny, zasłony, firany, dzianiny',addr:'ul. Targowa 48, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Fabric Shop, zasłonami, firanami i dzianinami, Praga Północ',lat:52.2530,lng:21.0470,secondhand:false},
+  {id:'h1',cat:'haberdashery',name:'Haberdashery Rajewscy',addr:'Wspólna 56, 00-684 Warsaw',hours:'Mon–Fri 10–18',phone:'+48 22 621 87 04',rating:4.7,reviews:349,notes:'Family-run since 1953; excellent thread selection',lat:52.2255,lng:21.0072,secondhand:false},
+  {id:'h2',cat:'haberdashery',name:'Haberdashery Motki Dwa',addr:'Wąwozowa 6, 02-796 Warsaw',hours:'Mon–Thu 11–19',phone:'+48 692 428 222',rating:4.9,reviews:768,notes:'Top-rated, beginner-friendly, ribbons and needles',lat:52.1319,lng:21.0700,secondhand:false},
+  {id:'h3',cat:'haberdashery',name:'Le Bijoux Haberdashery',addr:'Al. Jana Pawła II 45a, 01-008 Warsaw',hours:'Mon–Fri 10:30–19, Sb 10–14',phone:'+48 22 428 13 38',rating:4.3,reviews:243,notes:'Ogromny wybór, stanowisko do szycia na placesu',lat:52.2443,lng:20.9910,secondhand:false},
+  {id:'h4',cat:'haberdashery',name:'Tradycyjna Haberdashery (1949)',addr:'Widok 22, 00-023 Warsaw',hours:'Mon–Fri 11–19, Sb 11–15',phone:'+48 501 042 196',rating:3.8,reviews:85,notes:'Historic haberdashery since 1949',lat:52.2313,lng:21.0128,secondhand:false},
+  {id:'d1',cat:'designer',name:'Ciepielewska Design',addr:'Al. Ujazdowskie 24/9, 00-478 Warsaw',hours:'Mon–Fri 9–18',phone:'+48 602 599 991',rating:5.0,reviews:8,notes:'Bespoke women\'s fashion, premium fabrics',lat:52.2270,lng:21.0236,secondhand:false},
+  {id:'d2',cat:'designer',name:'SYLVIA Fashion House',addr:'Królewicza Jakuba 78, 02-956 Warsaw',hours:'Mon–Fri 9–17',phone:'+48 608 306 806',rating:4.7,reviews:18,notes:'Atelier — unique gowns and bridal dresses',lat:52.1764,lng:21.0718,secondhand:false},
+  {id:'d3',cat:'designer',name:'Studio Kroje',addr:'Stalowa 28/23, 03-427 Warsaw',hours:'Mon–Fri 10–17',phone:null,rating:5.0,reviews:6,notes:'Clothing design, custom garments and embroidery',lat:52.2604,lng:21.0419,secondhand:false},
+  {id:'p1',cat:'producer',name:'MANTONI — Producent odzieży',addr:'Migdałowa 89, 02-796 Warsaw',hours:'Mon–Thu 9–17',phone:'+48 606 727 179',rating:4.8,reviews:9,notes:'European private label clothing production',lat:52.1472,lng:21.0601,secondhand:false},
+  {id:'p2',cat:'producer',name:'Rascal Industry',addr:'Chełmska 30/34, 00-718 Warsaw',hours:'Mon–Fri 9–17',phone:'+48 604 222 870',rating:4.7,reviews:99,notes:'Personalised clothing, embroidery for companies',lat:52.2028,lng:21.0419,secondhand:false},
+  {id:'p3',cat:'producer',name:'Szulist Moda Klasyczna',addr:'Skaryszewska 15/20, 03-802 Warsaw',hours:'Mon–Fri 8–16',phone:'+48 22 619 70 90',rating:5.0,reviews:63,notes:'Classic wool coats, Polish production — 5★',lat:52.2497,lng:21.0494,secondhand:false},
+  {id:'b1',cat:'producer',name:'CARGO by OWEE',addr:'Filtrowa 62/224, 02-057 Warsaw',hours:'Mon–Fri 9–17',phone:'+48 794 347 928',rating:5.0,reviews:88,notes:'Backpacks and bags — solid materials, original design',lat:52.2199,lng:20.9884,secondhand:false},
+  {id:'b2',cat:'producer',name:'BLAHOL messenger bags',addr:'Suwak 4, 02-676 Warsaw',hours:'By appointment',phone:'+48 698 996 513',rating:4.9,reviews:44,notes:'Handmade messenger bags, custom orders',lat:52.1822,lng:20.9894,secondhand:false},
+  {id:'b3',cat:'producer',name:'JOHN & MARY',addr:'Oleandrów 5, 00-629 Warsaw',hours:'Tue–Fri 14–19, Sb 12–16',phone:'+48 535 955 189',rating:5.0,reviews:169,notes:'Leather bags and wallets — Polish production',lat:52.2166,lng:21.0183,secondhand:false},
+
+  // ── KRAWCY (źródło: rzemieslnicy.waw.pl) ──
+  {id:'k1',cat:'krawcy',name:'Usługi krawieckie "u Kasi"',addr:'Kasprowicza 72/lok.1A, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailoring services, Żoliborz',lat:52.2881,lng:20.9512,secondhand:false},
+  {id:'k2',cat:'krawcy',name:'Lucyna Szeja',addr:'Marymoncka 53, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailoring services, Żoliborz',lat:52.2930,lng:20.9640,secondhand:false},
+  {id:'k3',cat:'krawcy',name:'Pracownia Krawiecka',addr:'ul. Gdańska 4, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s workshop, Żoliborz',lat:52.2680,lng:20.9850,secondhand:false},
+  {id:'k4',cat:'krawcy',name:'Pracownia Krawiecko-Kuśnierska',addr:'ul. Mickiewicza 37, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailors i kuśnierze, Żoliborz',lat:52.2710,lng:20.9830,secondhand:false},
+  {id:'k5',cat:'krawcy',name:'Usługi Krawieckie',addr:'ul. Słowackiego 45 lok. 29, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailoring services, Żoliborz',lat:52.2750,lng:20.9780,secondhand:false},
+  {id:'k6',cat:'krawcy',name:'Pracownia Krawiecka "Szpuleczka"',addr:'Krasińskiego 8, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s workshop, Żoliborz',lat:52.2660,lng:20.9870,secondhand:false},
+  {id:'k7',cat:'krawcy',name:'Złota Nitka — Jadwiga Kur',addr:'Sady Żoliborskie 3 lok.U2, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailoring services, Żoliborz',lat:52.2740,lng:20.9810,secondhand:false},
+  {id:'k8',cat:'krawcy',name:'Krawiectwo damskie "U Joanny"',addr:'Krasińskiego 39/1, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Women\'s tailoring, Żoliborz',lat:52.2650,lng:20.9900,secondhand:false},
+  {id:'k9',cat:'krawcy',name:'Pracownia krawiecka',addr:'ul. Radzymińska 53 lok.36, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s workshop, Praga Północ',lat:52.2610,lng:21.0630,secondhand:false},
+  {id:'k10',cat:'krawcy',name:'Szycie miarowe Retro Me',addr:'ul. Stalowa 33, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Bespoke sewing, Praga Północ',lat:52.2600,lng:21.0460,secondhand:false},
+  {id:'k11',cat:'krawcy',name:'Przeróbki krawieckie — Danuta Fedorowicz',addr:'ul. Czynszowa 6 lok.20, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Alterations, Praga Północ',lat:52.2640,lng:21.0510,secondhand:false},
+  {id:'k12',cat:'krawcy',name:'Usługi krawieckie',addr:'ul. Grodzieńska 15/17 lok.5, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Usługi krawieckie, Praga Płn.',lat:52.2570,lng:21.0580,secondhand:false},
+  {id:'k13',cat:'krawcy',name:'Krawiectwo Bogna',addr:'ul. Mała 14 lok. 41, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailoring, Praga Północ',lat:52.2550,lng:21.0460,secondhand:false},
+  {id:'k14',cat:'krawcy',name:'Zakład Krawiecki Damsko-Męski',addr:'ul. Wileńska 11 lok.74, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s workshop, Praga Północ',lat:52.2530,lng:21.0440,secondhand:false},
+  {id:'k15',cat:'krawcy',name:'Szpulka',addr:'Ząbkowska 12 lok 86, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s workshop, Praga Północ',lat:52.2560,lng:21.0490,secondhand:false},
+  {id:'k16',cat:'krawcy',name:'Przeróbki Krawieckie — Edward Stec',addr:'ul. Okrzei 28, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Alterations, Praga Północ',lat:52.2510,lng:21.0530,secondhand:false},
+  {id:'k17',cat:'krawcy',name:'Studio krawieckie DIWALDI',addr:'Andersa 14, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Studio krawieckie, Śródmieście',lat:52.2390,lng:21.0010,secondhand:false},
+  {id:'k18',cat:'krawcy',name:'Atelieur Kępna 9',addr:'ul. Kępna 9, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s atelier, Praga Północ',lat:52.2590,lng:21.0550,secondhand:false},
+  {id:'k19',cat:'krawcy',name:'Usługi krawieckie i sprzedaż',addr:'Brzozowa 11/13, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailoring services, Old Town',lat:52.2490,lng:21.0150,secondhand:false},
+  {id:'k20',cat:'krawcy',name:'Pracownia Krawiecka — Józef Błoński',addr:'Piwna 6/10, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s workshop, Old Town',lat:52.2492,lng:21.0133,secondhand:false},
+  {id:'k21',cat:'krawcy',name:'Zakład krawiecki — Aleksander Świtkowski',addr:'ul. Kobielska 85, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s workshop, Praga Południe',lat:52.2320,lng:21.0870,secondhand:false},
+  {id:'k22',cat:'krawcy',name:'Poprawki krawieckie',addr:'ul. Kobielska 71, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Alterations, Praga Południe',lat:52.2330,lng:21.0850,secondhand:false},
+  {id:'k23',cat:'krawcy',name:'Poprawki krawieckie HANIA',addr:'ul. Grochowska 229, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Alterations, Praga Południe',lat:52.2430,lng:21.0710,secondhand:false},
+  {id:'k24',cat:'krawcy',name:'Pracownia krawiecka modENNA',addr:'ul. Waszyngtona 132, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s workshop, Praga Południe',lat:52.2390,lng:21.0680,secondhand:false},
+  {id:'k25',cat:'krawcy',name:'Usługi krawieckie — Grażyna Kaczmarek',addr:'ul. Igańska 34, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailoring services, Praga Południe',lat:52.2370,lng:21.0820,secondhand:false},
+  {id:'k26',cat:'krawcy',name:'Pracownia Krawiecka Sefpol',addr:'Górczewska 123, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor\'s workshop, Wola',lat:52.2290,lng:20.9390,secondhand:false},
+  {id:'k27',cat:'krawcy',name:'Moda Importa',addr:'Grzybowska 12/14, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailor, city centre (Pasaż Saski)',lat:52.2362,lng:20.9982,secondhand:false},
+  {id:'k28',cat:'krawcy',name:'Poprawki krawieckie — Jan Wódka',addr:'Chłodna 11, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Poprawki krawieckie, Wola',lat:52.2340,lng:20.9960,secondhand:false},
+  {id:'k29',cat:'krawcy',name:'Poprawki Krawieckie i Kaletnicze',addr:'Górczewska 27/35, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailors i kaletnicze, Wola',lat:52.2310,lng:20.9680,secondhand:false},
+  {id:'k30',cat:'krawcy',name:'Usługi Krawieckie',addr:'Plac Dąbrowskiego 5, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Tailoring services, Wola',lat:52.2380,lng:20.9880,secondhand:false},
+  {id:'o1',cat:'offer',name:'Deadstock cotton remnants — factory batch',addr:'Wola, Warszawa ',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Nadprodukcja fabryczna. 100% cotton, biel i ecru. Certyfikat GOTS.',secondhand:true,lat:52.2330,lng:20.9720,
+   offer:{material:'100% Cotton',composition:'cotton',origin:'Poland',colour:'white/ecru',certs:['GOTS'],dpp:'DPP-2025-PL-00218',width:'80–140 cm',length:'~120 m',weight:'~35 kg',qty:'Approx. 15 rolls',listingType:'sell',price:'4 PLN/m',desc:'Bawełna deadstock z nadprodukcji. Różne szerokości (80–140 cm), głównie biel i ecru. Certyfikat GOTS. Min. 10 m per zamówienie.',contact:'kontakt@fabrykapl.pl'}},
+  {id:'o2',cat:'offer',name:'Checked cotton — for sale or swap',addr:'Praga, Warszawa ',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Bawełna w kratę, certyfikat OEKO-TEX. Sprzedaż lub zamiana.',secondhand:true,lat:52.2490,lng:21.0580,
+   offer:{material:'Bawełna',composition:'100% cotton',origin:'Turkey',colour:'Krata',certs:['OEKO-TEX'],dpp:null,width:null,length:null,weight:'~12 kg',qty:'Various remnants ~12 kg',listingType:'swap',swap:'Płótno naturalne 400–600g/m², woskowana cotton lub Cordura 500D',desc:'Resztki z pracowni toreb. Kawałki od 20×20 do 80×60 cm. Certyfikat OEKO-TEX.',contact:'biuro@denimstudio.pl'}},
+  {id:'o3',cat:'offer',name:'Wanted: denim remnants',addr:'Warszawa, Śródmieście',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Looking for denim remnants for sewing projects.',secondhand:false,lat:52.2350,lng:21.0050,
+   offer:{material:'Denim',composition:'',origin:'',colour:'any',certs:['Brak'],dpp:'',width:'',length:'2 m',weight:'',qty:'approx. 2 metres',listingType:'wanted',price:'',desc:'Looking for denim remnants or scraps. Personal collection in Warsaw, city centre.',contact:''}},
+
+  {id:'o4',cat:'offer',name:'Undyed natural linen — roll',addr:'Mokotów, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Linen 100%, undyed, 140 cm. OEKO-TEX.',secondhand:false,lat:52.1960,lng:21.0270,
+   offer:{material:'Len',composition:'100% linen',origin:'Poland',colour:'ecru/naturalny',certs:['OEKO-TEX'],dpp:'DPP-2025-PL-00341',width:'140 cm',length:'30 m',weight:'8 kg',qty:'1 rolka ~30 m',listingType:'sell',price:'22 PLN/m',desc:'Len naturalny niebarwiony z polskiej przędzalni. Width 140 cm, gramatura 185 g/m². Idealny na ubrania, pościel, torby. Certyfikat OEKO-TEX.',contact:'len@naturalwear.pl'}},
+
+  {id:'o5',cat:'offer',name:'Merino wool — collection remnants',addr:'Żoliborz, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Merino wool 100%, various colours. Collection remnants.',secondhand:true,lat:52.2720,lng:20.9850,
+   offer:{material:'Wełna',composition:'100% merino',origin:'Italy',colour:'grey/navy/cherry',certs:['GOTS'],dpp:null,width:'150 cm',length:null,weight:'~6 kg',qty:'Pieces 0.5–4 m, total ~6 kg',listingType:'sell',price:'35 PLN/m',desc:'Merino wool remnants from an Italian mill after the AW collection ended. Weight 280 g/m². GOTS certified.',contact:'studio@modapl.com'}},
+
+  {id:'o6',cat:'offer',name:'Anti-pilling fleece — 5 factory rolls',addr:'Wola, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Anti-pilling fleece 300 g/m², 5 rolls of approx. 50 m.',secondhand:false,lat:52.2310,lng:20.9650,
+   offer:{material:'Polar fleece',composition:'100% polyester',origin:'Poland',colour:'black/navy/khaki/grey/bordeaux',certs:['Brak'],dpp:null,width:'150 cm',length:'~250 m',weight:'~75 kg',qty:'5 rolls of ~50 m',listingType:'sell',price:'8 PLN/m',desc:'Anti-pilling fleece 300 g/m², width 150 cm. Factory batch. Min. order 1 roll (~50 m).',contact:'+48 602 111 222'}},
+
+  {id:'o7',cat:'offer',name:'Natural silk — workshop remnants',addr:'Śródmieście, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Natural silk 100%, remnants from a tailor\'s workshop.',secondhand:true,lat:52.2320,lng:21.0180,
+   offer:{material:'Jedwab',composition:'100% silk',origin:'China',colour:'cream/gold',certs:['Brak'],dpp:null,width:'90 cm',length:null,weight:'~1.5 kg',qty:'Several pieces 0.3–1.5 m',listingType:'sell',price:'55 PLN/m',desc:'Silk remnants from a tailor\'s workshop. Various lengths from 30 cm to 1.5 m. Ideal for scarves and linings.',contact:'atelier.srm@gmail.com'}},
+
+  {id:'o8',cat:'offer',name:'Organic Cotton GOTS — zamiana za len',addr:'Praga Południe, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'GOTS organic cotton, will swap for linen or hemp.',secondhand:false,lat:52.2380,lng:21.0620,
+   offer:{material:'Organic Cotton',composition:'100% cotton organiczna',origin:'Turkey',colour:'raw white',certs:['GOTS'],dpp:'DPP-2025-TR-00892',width:'145 cm',length:'15 m',weight:'4.2 kg',qty:'~15 m',listingType:'swap',swap:'Natural linen or hemp fabric, min. 10 m',desc:'Organic Cotton certyfikowana GOTS, gramatura 160 g/m². Zamienię za len lub tkaniny konopne.',contact:'eco.swap.waw@proton.me'}},
+
+  {id:'o9',cat:'offer',name:'Printed viscose — retro flowers',addr:'Ursynów, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Viscose with retro floral print, 130 cm.',secondhand:false,lat:52.1530,lng:21.0450,
+   offer:{material:'Wiskoza',composition:'100% viscose',origin:'South Korea',colour:'flowers on white',certs:['OEKO-TEX'],dpp:null,width:'130 cm',length:'22 m',weight:'5.5 kg',qty:'~22 m, min. 3 m',listingType:'sell',price:'18 PLN/m',desc:'Viscose with retro floral print. Weight 120 g/m², very soft and flowing. OEKO-TEX Standard 100.',contact:'tkaniny.ursynow@wp.pl'}},
+
+  {id:'o10',cat:'offer',name:'Black neoprene — swimwear remnants',addr:'Bielany, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'3mm neoprene, black. Workshop remnants.',secondhand:true,lat:52.2940,lng:20.9620,
+   offer:{material:'Neopren',composition:'neoprene 3mm',origin:'Poland',colour:'czarny',certs:['Brak'],dpp:null,width:'150 cm',length:null,weight:'~10 kg',qty:'Irregular pieces, total ~10 kg',listingType:'sell',price:'25 PLN/kg',desc:'3mm neoprene remnants from a swimwear workshop. Various shapes and sizes.',contact:'+48 517 333 444'}},
+
+  {id:'o11',cat:'offer',name:'Cordura 500D — technical fabric',addr:'Targówek, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Cordura 500D, black and olive. For bags and outdoor use.',secondhand:false,lat:52.2680,lng:21.0750,
+   offer:{material:'Nylon',composition:'100% nylon Cordura 500D',origin:'USA',colour:'black/olive',certs:['Bluesign'],dpp:null,width:'152 cm',length:'40 m',weight:'18 kg',qty:'2 rolls of ~20 m',listingType:'sell',price:'45 PLN/m',desc:'Cordura 500D, technical fabric for bags, backpacks and outdoor clothing. Bluesign certified. Min. 2 m.',contact:'gear.fabric.waw@gmail.com'}},
+
+  {id:'o12',cat:'offer',name:'Wanted: cotton muslin for photography',addr:'Białołęka, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Looking for cotton muslin for a photography backdrop.',secondhand:false,lat:52.3210,lng:21.0330,
+   offer:{material:'Muślin bawełniany',composition:'100% cotton',origin:'any',colour:'biały lub ecru',certs:['Brak'],dpp:null,width:'min. 200 cm',length:'4–6 m',weight:'',qty:'4–6 m, min. width 200 cm',listingType:'wanted',price:'',desc:'Szukam muślinu bawełnianego szerokiego (min. 200 cm) do tła fotograficznego. Colour biały lub ecru.',contact:'foto.tlo@gmail.com'}},
+
+  {id:'o13',cat:'offer',name:'Scottish wool tweed — deadstock',addr:'Ochota, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Harris Tweed imported from Scotland, boutique deadstock.',secondhand:true,lat:52.2190,lng:20.9790,
+   offer:{material:'Tweed',composition:'80% wool 20% nylon',origin:'Scotland',colour:'grey-brown',certs:['Brak'],dpp:null,width:'145 cm',length:'8 m',weight:'3.8 kg',qty:'~8 m, uncut',listingType:'sell',price:'90 PLN/m',desc:'Original Harris Tweed from Scotland. Deadstock from a closed boutique. Weight 560 g/m². Ideal for coats.',contact:'secondhand.fabric@op.pl'}},
+
+  {id:'o14',cat:'offer',name:'Bamboo jersey — soft, hypoallergenic',addr:'Mokotów, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Bamboo jersey 95/5, very soft. Ideal for children\'s clothing.',secondhand:false,lat:52.1870,lng:21.0130,
+   offer:{material:'Jersey',composition:'95% bamboo 5% elastane',origin:'China',colour:'pink/mint/grey/ecru',certs:['OEKO-TEX'],dpp:null,width:'160 cm',length:'~60 m',weight:'14 kg',qty:'4 colours of ~15 m',listingType:'sell',price:'16 PLN/m',desc:'Bamboo jersey, hypoallergenic, very soft. OEKO-TEX. 4 colours. Min. 3 m.',contact:'bambusowe.tkaniny@gmail.com'}},
+
+  {id:'o15',cat:'offer',name:'Wool felt — studio colour palette',addr:'Praga Północ, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Wool felt 3mm, 20+ colours. Creative studio remnants.',secondhand:true,lat:52.2640,lng:21.0480,
+   offer:{material:'Filc',composition:'100% wool',origin:'Poland',colour:'20+ colours',certs:['Brak'],dpp:null,width:'180 cm',length:null,weight:'~8 kg',qty:'Sheets 50x50 cm and 100x180 cm',listingType:'sell',price:'3 PLN/arkusz A4',desc:'Wool felt 3mm from a creative studio (closing down). Over 20 colours. A4, A3 and 100×180 cm sheets.',contact:'+48 530 999 888'}},
+
+  {id:'o16',cat:'offer',name:'Waffle cotton — natural colour',addr:'Wola, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Waffle cotton 100%, natural colour. 3 rolls of 25 m.',secondhand:false,lat:52.2360,lng:20.9700,
+   offer:{material:'Bawełna',composition:'100% cotton',origin:'Portugal',colour:'natural/ecru',certs:['OEKO-TEX'],dpp:'DPP-2025-PT-00124',width:'135 cm',length:'75 m',weight:'20 kg',qty:'3 rolls of 25 m',listingType:'sell',price:'14 PLN/m',desc:'Waffle cotton from Portugal. OEKO-TEX Standard 100. Weight 220 g/m². Ideal for towels and pyjamas.',contact:'fabric.import.waw@gmail.com'}},
+
+  {id:'o17',cat:'offer',name:'Wanted: natural leather for bags',addr:'Centrum, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Looking for natural leather pieces for bags.',secondhand:false,lat:52.2280,lng:21.0060,
+   offer:{material:'Skóra',composition:'natural leather',origin:'any',colour:'black, tan, cognac',certs:['Brak'],dpp:null,width:'',length:'',weight:'min. 5 kg',qty:'min. 5 kg calf or cow leather',listingType:'wanted',price:'',desc:'Looking for natural leather (calf or cow) in black, tan or cognac. Thickness 1–1.5 mm.',contact:'handmade.bags.warszawa@gmail.com'}},
+
+  {id:'o18',cat:'offer',name:'Silk satin — swap for other silk',addr:'Wilanów, Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Satyna jedwabna z kolekcji ślubnej. Swap for inne jedwabne.',secondhand:true,lat:52.1620,lng:21.0870,
+   offer:{material:'Satyna',composition:'100% silk',origin:'France',colour:'ivory/ecru/powder pink',certs:['Brak'],dpp:null,width:'114 cm',length:'~12 m',weight:'2.8 kg',qty:'3 pieces: 5m, 4m, 3m',listingType:'swap',swap:'Silk crepe, georgette or charmeuse in light colours',desc:'Silk satin from an unused bridal collection. Three pieces (5+4+3 m). Happy to swap for other silk fabrics.',contact:'atelier.willanow@op.pl'}},
+
+  {id:'o19',cat:'offer',name:'Old buttons — set of 7, diameter 3 cm',addr:'Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Old buttons, diameter 3 cm, set of 7.',secondhand:true,lat:52.2310,lng:21.0100,
+   offer:{material:'Buttons',composition:'',origin:'',colour:'',certs:['Brak'],dpp:null,width:null,length:null,weight:null,qty:'7 pieces',listingType:'sell',price:null,desc:'Old buttons, diameter 3 cm. Set of 7 pieces.',contact:''}},
+
+  {id:'o20',cat:'offer',name:'Italian cotton — production leftovers, 3 m',addr:'Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Italian cotton from production leftovers. 100% cotton, 3 linear metres, 1.50 m wide.',secondhand:false,lat:52.2410,lng:21.0050,
+   offer:{material:'Cotton',composition:'100% cotton',origin:'Italy',colour:'',certs:['Brak'],dpp:null,width:'150 cm',length:'3 m',weight:null,qty:'3 linear metres',listingType:'sell',price:null,desc:'Italian cotton fabric from production leftovers. 100% cotton, 3 linear metres, width 1.50 m.',contact:''}},
+
+  {id:'o21',cat:'offer',name:'Zippers — mix of colours, 60 pcs',addr:'Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'60 zippers left after store closure, mix of colours.',secondhand:true,lat:52.2350,lng:21.0080,
+   offer:{material:'Zippers',composition:'',origin:'',colour:'mix',certs:['Brak'],dpp:null,width:null,length:null,weight:null,qty:'60 pieces',listingType:'sell',price:null,desc:'Zippers, 60 pieces remaining after store closure. Mix of colours.',contact:''}},
+
+  {id:'o22',cat:'offer',name:'Orange lace edge — 2 m',addr:'Warszawa',hours:null,phone:null,rating:null,reviews:null,
+   notes:'Orange lace edge trim, 2 m long, 1.2 cm wide.',secondhand:false,lat:52.2360,lng:21.0090,
+   offer:{material:'Lace',composition:'',origin:'',colour:'orange',certs:['Brak'],dpp:null,width:'1.2 cm',length:'2 m',weight:null,qty:'2 metres',listingType:'sell',price:null,desc:'Orange lace edge trim. 2 m long, 1.2 cm wide.',contact:''}},
+
+  // ── HURTOWNIE ──
+  {id:'h_1',cat:'hurtownie',name:'Magazyn Tkanin X.Qual-tex',addr:'Wał Miedzeszyński 646, 03-994 Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Fabric wholesaler, Praga Południe',lat:52.2480,lng:21.0960,secondhand:false},
+  {id:'h_2',cat:'hurtownie',name:'Sklep Antex Hurtownia Tkanin',addr:'Marynarska 14A, 02-674 Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Fabric wholesaler, Mokotów',lat:52.1940,lng:21.0000,secondhand:false},
+  {id:'h_3',cat:'hurtownie',name:'GLORMEB Tkaniny & Artykuły Tapicerskie',addr:'Jana Olbrachta 94A, 01-102 Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Fabric and upholstery wholesaler, Wola',lat:52.2410,lng:20.9540,secondhand:false},
+
+  // ── SZEWCY ──
+  {id:'sw1',cat:'szewcy',name:'Naprawa obuwia — Jerzy Affek',addr:'Bazar Wolumen SkZ Wolumen 13, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Cobbler, Żoliborz',lat:52.2860,lng:20.9700,secondhand:false},
+  {id:'sw2',cat:'szewcy',name:'Zakład szewski Zdzisław Kalinowski',addr:'Kasprowicza 48, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Cobbler\'s workshop, Żoliborz',lat:52.2830,lng:20.9540,secondhand:false},
+  {id:'sw3',cat:'szewcy',name:'Usługi szewskie',addr:'ul. Mickiewicza 48, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Cobbling services, Żoliborz',lat:52.2700,lng:20.9830,secondhand:false},
+
+  // ── KALETNICY ──
+  {id:'ka1',cat:'kaletnicy',name:'Kaletnik',addr:'ul. Słowackiego 20, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Leather worker, Żoliborz',lat:52.2745,lng:20.9800,secondhand:false},
+  {id:'ka2',cat:'kaletnicy',name:'Kaletnik',addr:'ul. Mickiewicza 18b, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Leather worker, Żoliborz',lat:52.2708,lng:20.9825,secondhand:false},
+  {id:'ka3',cat:'kaletnicy',name:'Kaletnik — Włodzimierz Piekarski',addr:'pl. Piotra Szembeka 6, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Leather worker, Praga Południe',lat:52.2460,lng:21.0730,secondhand:false},
+  {id:'ka4',cat:'kaletnicy',name:'Pracownia Kaletniczo-Rymarska',addr:'al. Jana Pawła II 46/48 p. 3A, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Leather and saddlery workshop, Wola',lat:52.2390,lng:20.9870,secondhand:false},
+  {id:'ka5',cat:'kaletnicy',name:'Pracownia Kaletniczo-Rymarska',addr:'Męcińska 16, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Leather and saddlery workshop, Praga Północ',lat:52.2620,lng:21.0400,secondhand:false},
+
+  // ── TECHNICY MASZYN DO SZYCIA ──
+  {id:'tm1',cat:'technicy',name:'Sewing Machine Repair — Sławomir',addr:'Wspólna 54A, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Sewing machine repair and service, city centre',lat:52.2255,lng:21.0072,secondhand:false},
+  {id:'tm2',cat:'technicy',name:'Sewing Machine Mechanics — Henryk',addr:'Belwederska 10, Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Sewing machine mechanics, Mokotów',lat:52.2143,lng:21.0385,secondhand:false},
+
+  // ── SZWALNIE — partial data pending Google Maps links ──
+  {id:'sz1',cat:'szwalnie',name:'Klari Sp. z o.o.',addr:'ul. Rydygiera 8 bud. 6c, 01-793 Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Sewing workshop, Żoliborz',lat:52.2710,lng:20.9720,secondhand:false},
+  {id:'sz2',cat:'szwalnie',name:'Chojnex Barbara Chojecka',addr:'Łąkowa 17, 05-091 Ząbki',hours:'Mon–Fri 7–15',phone:'+48 501 150 448',rating:null,reviews:null,notes:'Sportswear manufacturer, Ząbki',lat:52.2930,lng:21.0880,secondhand:false},
+  {id:'sz3',cat:'szwalnie',name:'Szwalnia DA-JAN — Produkcja i przeszycia',addr:'Grochowska 23/budynek G, 04-186 Warszawa',hours:'Mon–Fri 8–17',phone:'+48 502 686 901',rating:4.7,reviews:7,notes:'Sewing workshop, clothing production and alterations, Grochów',lat:52.2443,lng:21.0681,secondhand:false},
+
+  // ── PRODUCENCI TKANIN — pending Google Maps link ──
+  {id:'pt1',cat:'producenci_tkanin',name:'Producent tkanin — do uzupełnienia',addr:'Warszawa',hours:null,phone:null,rating:null,reviews:null,notes:'Data to be completed',lat:52.2297,lng:21.0122,secondhand:false},
+
+  // ── DRUKARNIE TKANIN I HAFCIARNIE ──
+  {id:'dr1',cat:'drukarnie',name:'HaftyNadruki.pl',addr:'ul. Szczotkarska 25, 01-382 Warszawa',hours:null,phone:null,rating:4.9,reviews:20,notes:'Fabric printer and embroidery, Wola',lat:52.2310,lng:20.9480,secondhand:false},
+  {id:'dr2',cat:'drukarnie',name:'Hako Sp. z o.o. — Haft komputerowy',addr:'Borymowska 30, 03-565 Warszawa',hours:null,phone:'+48 22 678 09 96',rating:4.8,reviews:32,notes:'Embroidery studio, computerised embroidery, Targówek',lat:52.2750,lng:21.0680,secondhand:false},
+  {id:'dr3',cat:'drukarnie',name:'B&W Haftex',addr:'Kanałowa 26a, 03-663 Warszawa',hours:null,phone:'+48 22 678 15 09',rating:4.7,reviews:27,notes:'Embroidery studio, computerised embroidery, Białołęka',lat:52.2890,lng:21.0470,secondhand:false},
+];
+
+var currentCat = 'all';
+var currentMode = 'lokale'; // 'lokale' | 'materialy'
+var currentOfferFilter = 'all'; // listing type filter for materialy mode
+var currentView = 'list';
+var selectedId = null;
+var pageSize = 8;
+var currentPage = 1;
+var map = null;
+var leafletMarkers = {};
+var mapInitialized = false;
+var mapCatFilter = 'all';
+
+var CATS = [
+  {key:'sorting',label:'Sorting & Recycling',color:'#3a6b4a'},
+  {key:'fabric',label:'Fabric Shops',color:'#185FA5'},
+  {key:'haberdashery',label:'Haberdashery',color:'#534AB7'},
+  {key:'krawcy',label:'Tailors',color:'#d4488a'},
+  {key:'designer',label:'Designers',color:'#993556'},
+  {key:'producer',label:'Clothing Producers',color:'#856404'},
+  {key:'szewcy',label:'Cobblers',color:'#e67e22'},
+  {key:'kaletnicy',label:'Leather Workshops',color:'#8e44ad'},
+  {key:'hurtownie',label:'Wholesalers',color:'#16a085'},
+  {key:'technicy',label:'Sewing Machine Repair',color:'#2980b9'},
+  {key:'szwalnie',label:'Sewing Workshops',color:'#27ae60'},
+  {key:'producenci_tkanin',label:'Fabric Producers',color:'#7f8c8d'},
+  {key:'drukarnie',label:'Printers & Embroidery',color:'#c0392b'}
+];
+
+var MOCK_RESPONSES = {
+  'len': 'In Warsaw you can find natural linen at <strong>Studio Tkanin</strong> (Puławska 243, Mokotów). Textiloop also has a deadstock linen offer at 22 PLN/m for sale. Want to see it on the map?',
+  'szwalni': 'On Textiloop you will find several small-batch sewing workshops. <strong>Klari Sp. z o.o.</strong> (Rydygiera 8, Żoliborz) specialises in small runs. I would also recommend contacting <strong>Rascal Industry</strong> (Chełmska 30). What are your quantity requirements?',
+  'nadruk': 'For fabric printing I recommend <strong>HaftyNadruki.pl</strong> (Szczotkarska 25, Wola). They offer both screen printing and sublimation on various fabrics. Do you need a small run or mass production?',
+  'krawcy': 'Tailors experienced with wool include <strong>Szwalnia ECLIPSE</strong> (Wiśniowa 55, Mokotów) and <strong>Pracownia Krawiecka Tadeusz Wiśniewski</strong> (Śniadeckich 15). Both take custom orders and work with natural fabrics. There are 30+ tailors on the map — would you like to filter by district?',
+  'gots': 'Textiloop has GOTS-certified fabric offers: organic cotton of Turkish origin (swap, Praga Południe) and Italian merino wool. Wholesaler <strong>Antex</strong> (Marynarska 14A) may have a wider selection — worth calling.',
+  'wiskoza': 'You can find viscose at <strong>Mimoza Tkaniny</strong> (ul. Józefa Bellottiego 3) — a well-stocked shop with a wide range of sewing fabrics including viscose in many colours and prints. Are you looking for a specific colour or weight?',
+  'maszyn': 'Sewing machine repair is offered by <strong>Sławomir</strong> at Wspólna 54A (city centre) and <strong>Henryk</strong> at Belwederska 10 (Mokotów). Both serve the Warsaw area with home visits.',
+  'default': 'I understand — you are looking for something specific in the textile industry. Textiloop has over 100 listings: fabric shops, tailors, workshops, wholesalers and material offers. You can also use filters in the <strong>Venues</strong> tab or browse <strong>Materials</strong> available for sale or swap. Can I help narrow it down?'
+};
+
+function mockAsk(btn) {
+  var input = document.getElementById('asystent-input');
+  var q = btn ? btn.textContent : (input ? input.value.trim() : '');
+  if (!q) return;
+  if (input) input.value = '';
+
+  var chat = document.getElementById('asystent-chat');
+  var empty = document.getElementById('asystent-empty');
+  if (!chat) return;
+
+  // Show chat, hide empty state
+  if (empty) empty.style.display = 'none';
+  chat.style.display = 'flex';
+
+  chat.innerHTML += '<div class="ac-msg ac-user"><div class="ac-avatar">👤</div><div class="ac-bubble">'+q+'</div></div>';
+
+  var thinkId = 'think-'+Date.now();
+  chat.innerHTML += '<div class="ac-msg" id="'+thinkId+'"><div class="ac-avatar">✶</div><div class="ac-bubble"><span class="ac-dot"></span><span class="ac-dot"></span><span class="ac-dot"></span></div></div>';
+  chat.scrollTop = chat.scrollHeight;
+
+  var ql = q.toLowerCase();
+  var resp = MOCK_RESPONSES.default;
+  if (ql.includes('linen') || ql.includes('len')) resp = MOCK_RESPONSES['len'];
+  else if (ql.includes('workshop') || ql.includes('sewing studio') || ql.includes('szwalni')) resp = MOCK_RESPONSES['szwalni'];
+  else if (ql.includes('print') || ql.includes('embroid') || ql.includes('nadruk')) resp = MOCK_RESPONSES['nadruk'];
+  else if (ql.includes('tailor') || ql.includes('wool') || ql.includes('wełn') || ql.includes('krawcy') || ql.includes('krawiec')) resp = MOCK_RESPONSES['krawcy'];
+  else if (ql.includes('gots') || ql.includes('organic') || ql.includes('certif')) resp = MOCK_RESPONSES['gots'];
+  else if (ql.includes('viscose') || ql.includes('wiskoz')) resp = MOCK_RESPONSES['wiskoza'];
+  else if (ql.includes('machine') || ql.includes('repair') || ql.includes('maszyn')) resp = MOCK_RESPONSES['maszyn'];
+
+  setTimeout(function() {
+    var el = document.getElementById(thinkId);
+    if (el) el.outerHTML = '<div class="ac-msg"><div class="ac-avatar">✶</div><div class="ac-bubble">'+resp+'</div></div>';
+    chat.scrollTop = chat.scrollHeight;
+  }, 1200);
+}
+
+function renderSidebarFilters() {
+  var el = document.getElementById('sf-grid');
+  var allCount = DB.filter(function(e){return e.cat!=='offer';}).length;
+  el.innerHTML = '<button class="sf-btn'+(currentCat==='all'?' on':'')+'" onclick="setFilter(\'all\',this)">All <span class="sf-count">'+allCount+'</span></button>' +
+    CATS.map(function(c){
+      var count = DB.filter(function(e){return e.cat===c.key;}).length;
+      return '<button class="sf-btn'+(currentCat===c.key?' on':'')+'" onclick="setFilter(\''+c.key+'\',this)">'+
+        '<span class="sf-dot" style="background:'+c.color+'"></span>'+c.label+
+        '<span class="sf-count">'+count+'</span></button>';
+    }).join('');
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  currentPage = 1;
+  currentOfferFilter = 'all';
+
+  // subnav toggle (list view)
+  var snl = document.getElementById('sn-lokale');
+  var snm = document.getElementById('sn-materialy');
+  var sna = document.getElementById('sn-asystent');
+  if(snl) snl.classList.toggle('active', mode==='lokale');
+  if(snm) snm.classList.toggle('active', mode==='materialy');
+  if(sna) sna.classList.toggle('active', mode==='asystent');
+
+  // map topbar toggle
+  var mml = document.getElementById('map-mode-lokale');
+  var mmm = document.getElementById('map-mode-materialy');
+  if(mml) mml.classList.toggle('active', mode==='lokale');
+  if(mmm) mmm.classList.toggle('active', mode==='materialy');
+
+  // toggle sidebars
+  var sl = document.getElementById('sidebar-lokale');
+  var sm = document.getElementById('sidebar-materialy');
+  var mc2 = document.getElementById('mini-map-card');
+  if(sl) sl.style.display = mode==='lokale' ? '' : 'none';
+  if(sm) sm.style.display = mode==='materialy' ? '' : 'none';
+  if(mc2) mc2.style.display = mode==='asystent' ? 'none' : '';
+
+  // mini-map label
+  var mlt = document.getElementById('mini-map-label-text');
+  if(mlt) mlt.textContent = mode==='materialy' ? 'Offers on map' : 'Show on map';
+
+  var adBanner = document.getElementById('ad-banner');
+  var leftCol = document.getElementById('left-col');
+  if(adBanner) adBanner.style.display = mode==='asystent' ? 'none' : '';
+  if(leftCol) leftCol.style.display = mode==='asystent' ? 'none' : '';
+
+  var qi = document.getElementById('q');
+  if (qi) qi.value = '';
+  if (qi) qi.placeholder = mode==='lokale' ? 'Search venues, locations…' : 'Search materials, fabric, colour…';
+
+  if(mode==='lokale') renderSidebarFilters();
+
+  // update map markers + chips if map is open
+  if(mapInitialized && map) {
+    mapCatFilter = 'all';
+    updateMapMarkers();
+    renderMapCatFilters();
+    renderMapList('');
+  }
+
+  renderResults();
+}
+
+function setOfferFilter(lt, btn) {
+  currentOfferFilter = lt;
+  currentPage = 1;
+  document.querySelectorAll('#subnav-materialy .sn-tab').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  renderResults();
+}
+
+
+function setFilter(cat, btn) {
+  // toggle off if same cat clicked again
+  if (currentCat === cat && cat !== 'all') cat = 'all';
+  currentCat = cat; currentPage = 1;
+  document.querySelectorAll('.sn-tab').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.sn-tab').forEach(function(b){ if(b.dataset.cat===cat) b.classList.add('active'); });
+  renderSidebarFilters();
+  renderResults();
+}
+
+function getFiltered() {
+  var q = norm(document.getElementById('q').value||'');
+
+  if (currentMode === 'materialy') {
+    var sh = document.getElementById('sh-toggle').checked;
+    var fr = document.getElementById('free-toggle').checked;
+    var wa = document.getElementById('wanted-toggle').checked;
+    var gots = document.getElementById('gots-toggle').checked;
+    var oeko = document.getElementById('oeko-toggle').checked;
+    return DB.filter(function(e) {
+      if (e.cat !== 'offer' || !e.offer) return false;
+      if (currentOfferFilter !== 'all' && e.offer.listingType !== currentOfferFilter) return false;
+      if (q) {
+        function wbMatch(text) { return normWordMatch(text, q); }
+        var nameMatch = wbMatch(e.name);
+        var matMatch = wbMatch(e.offer.material||'');
+        var compMatch = wbMatch(e.offer.composition||'');
+        var colourMatch = wbMatch(e.offer.colour||'');
+        if (!nameMatch && !matMatch && !compMatch && !colourMatch) return false;
+      }
+      if (sh && !e.secondhand) return false;
+      if (fr && !(e.offer.listingType==='free'||e.offer.listingType==='swap')) return false;
+      if (wa && e.offer.listingType!=='wanted') return false;
+      if (gots && !(e.offer.certs&&e.offer.certs.indexOf('GOTS')>=0)) return false;
+      if (oeko && !(e.offer.certs&&e.offer.certs.indexOf('OEKO-TEX')>=0)) return false;
+      return true;
+    });
+  }
+
+  // lokale mode — exclude offers
+  var r45 = document.getElementById('r45-toggle').checked;
+  var r40 = document.getElementById('r40-toggle').checked;
+
+  // ── Smart keyword → category mapping ─────────────────────────────────────
+  var forceCat = null;
+  if (q && currentCat === 'all') {
+    var fabricKeywords = ['cotton','linen','wool','silk','polyester','viscose','neoprene','nylon','muslin','tweed','jersey','felt','satin','velvet','fabric','material','chiffon','flannel','jacquard','corduroy','rayon','elastane','spandex','organza','lace','fleece','denim','bawełny','len','lnu','wełna','wełny','jedwab','wiskoza','tkanin','materiał','dzianin','aksamit','szyfon','flanela','żakard','popelina','sztruks'];
+    var haberdasheryKeywords = ['button','buttons','thread','threads','ribbon','ribbons','needle','needles','zipper','zippers','zip','hook','snap','elastic','tape','thimble','pin','pins','scissors','trimming','notions','haberdashery','wstążka','wstążki','nić','nici','guzik','guziki','igła','igły','zamek','suwak','agrafka','taśma','szpilka','szpilki'];
+    var szewcyKeywords = ['but','buty','obuwie','naprawa obuwia','szewc','zelówka','zelowanie','podeszwa'];
+    var kaletnicyKeywords = ['skóra','futro','kaletnik','torba skórzana','portfel','rymarski','kaletniczo'];
+    var technicyKeywords = ['maszyna','maszyny','do szycia','serwis maszyn','naprawa maszyn','mechanika maszyn'];
+
+    // Use word-boundary matching: keyword must appear as a whole word (not inside another word)
+    function wordMatch(text, keywords) {
+      return keywords.some(function(k) { return normWordMatch(text, k); });
+    }
+
+    if (wordMatch(q, fabricKeywords)) forceCat = 'fabric';    else if (wordMatch(q, haberdasheryKeywords)) forceCat = 'haberdashery';
+    else if (wordMatch(q, szewcyKeywords)) forceCat = 'szewcy';
+    else if (wordMatch(q, kaletnicyKeywords)) forceCat = 'kaletnicy';
+    else if (wordMatch(q, technicyKeywords)) forceCat = 'technicy';
+  }
+
+  return DB.filter(function(e) {
+    if (e.cat === 'offer') return false;
+    var effectiveCat = forceCat || currentCat;
+    if (effectiveCat !== 'all' && e.cat !== effectiveCat) return false;
+    if (q && !forceCat) {
+      var catLabel = (CAT_LABEL[e.cat]||'').toLowerCase();
+      var nq = norm(q);
+      var matches = norm(e.name).indexOf(nq)>=0
+        || norm(e.addr).indexOf(nq)>=0
+        || norm(e.notes||'').indexOf(nq)>=0
+        || norm(catLabel).indexOf(nq)>=0;
+      if (!matches) return false;
+    }
+    if (r45 && (e.rating==null||e.rating<4.5)) return false;
+    if (r40 && (e.rating==null||e.rating<4.0)) return false;
+    return true;
+  });
+}
+
+function getSorted(arr) {
+  var sort = document.getElementById('sort-select').value;
+  var copy = arr.slice();
+  if (sort==='rating') copy.sort(function(a,b){return (b.rating||0)-(a.rating||0);});
+  else if (sort==='reviews') copy.sort(function(a,b){return (b.reviews||0)-(a.reviews||0);});
+  else if (sort==='name') copy.sort(function(a,b){return a.name.localeCompare(b.name);});
+  else copy.sort(function(a,b){
+    if(a.cat==='offer'&&b.cat!=='offer') return -1;
+    if(b.cat==='offer'&&a.cat!=='offer') return 1;
+    return (b.reviews||0)-(a.reviews||0);
+  });
+  // Always pin offers with photos to the very top (in materials mode)
+  if (currentMode === 'materialy') {
+    copy.sort(function(a,b){
+      var aHas = OFFER_PHOTOS[a.id] ? 1 : 0;
+      var bHas = OFFER_PHOTOS[b.id] ? 1 : 0;
+      return bHas - aHas;
+    });
+  }
+  return copy;
+}
+
+function getRatingLabel(r) {
+  if(!r) return '';
+  if(r>=4.8) return 'Exceptional';
+  if(r>=4.5) return 'Wonderful';
+  if(r>=4.0) return 'Very Good';
+  if(r>=3.5) return 'Good';
+  return 'Okay';
+}
+
+function renderResults() {
+  var filtered = getSorted(getFiltered());
+  var total = filtered.length;
+  var paged = filtered.slice(0, pageSize * currentPage);
+
+  var mc = document.getElementById('mini-map-count');
+  if(mc) mc.textContent = total + (currentMode==='materialy' ? ' ofert' : ' places');
+
+  if (currentMode === 'asystent') {
+    document.getElementById('results-list').style.display = 'none';
+    document.getElementById('materialy-grid').style.display = 'none';
+    document.getElementById('asystent-panel').style.display = '';
+    document.getElementById('load-more-wrap').style.display = 'none';
+    document.getElementById('results-heading').textContent = '';
+    document.getElementById('results-sub').textContent = '';
+    var rh = document.querySelector('.results-header');
+    var rs = document.getElementById('results-search');
+    var nb = document.getElementById('notice-banner');
+    var ss = document.querySelector('.sort-select');
+    if(rh) rh.style.display = 'none';
+    if(rs) rs.style.display = 'none';
+    if(nb) nb.style.display = 'none';
+    if(ss) ss.style.display = 'none';
+    return;
+  }
+  // Restore chrome for non-asystent modes
+  var rh2 = document.querySelector('.results-header');
+  var rs2 = document.getElementById('results-search');
+  var ss2 = document.querySelector('.sort-select');
+  if(rh2) rh2.style.display = '';
+  if(rs2) rs2.style.display = '';
+  if(ss2) ss2.style.display = '';
+  document.getElementById('asystent-panel').style.display = 'none';
+
+  if (currentMode === 'materialy') {
+    document.getElementById('results-heading').textContent = 'Warsaw: all offers';
+    document.getElementById('results-sub').textContent = total+' ofert';
+    document.getElementById('results-list').style.display = 'none';
+    document.getElementById('materialy-grid').style.display = '';
+
+    var ltBadge = {
+      sell: {label:'For sale', bg:'rgba(200,85,61,.85)', color:'#fff'},
+      swap: {label:'Swap', bg:'rgba(58,107,74,.85)', color:'#fff'},
+      free: {label:'Free', bg:'rgba(58,107,74,.85)', color:'#fff'},
+      wanted: {label:'Wanted', bg:'rgba(100,100,100,.75)', color:'#fff'}
+    };
+
+    var ghtml = '<div class="mat-grid">';
+    paged.forEach(function(e) {
+      var o = e.offer;
+      var lt = ltBadge[o.listingType] || {label:o.listingType, bg:'rgba(0,0,0,.5)', color:'#fff'};
+      var tags = [];
+      if(o.material) tags.push(o.material);
+      if(o.composition) tags.push(o.composition);
+      if(o.colour) tags.push(o.colour);
+      if(o.width) tags.push(o.width);
+      var certs = (o.certs||[]).filter(function(c){return c!=='Brak'&&c!=='None';});
+
+      ghtml += '<div class="mat-card" onclick="selectEntry(\''+e.id+'\')">';
+      ghtml += '<div class="mat-thumb">';
+      if (OFFER_PHOTOS[e.id]) ghtml += '<img src="'+OFFER_PHOTOS[e.id]+'" alt="">';
+      else ghtml += '🧵';
+      ghtml += '<button class="mat-fav" onclick="event.stopPropagation()">♡</button>';
+      ghtml += '<span class="mat-lt-badge" style="background:'+lt.bg+';color:'+lt.color+'">'+lt.label+'</span>';
+      ghtml += '</div>';
+      ghtml += '<div class="mat-body">';
+      ghtml += '<div class="mat-name">'+e.name+'</div>';
+      if(tags.length) ghtml += '<div class="mat-tags">'+tags.map(function(t){return '<span class="mat-tag">'+t+'</span>';}).join('')+'</div>';
+      ghtml += '<div class="mat-addr">'+e.addr+'</div>';
+      ghtml += '<div class="mat-foot">';
+      if(o.price) ghtml += '<div class="mat-price">'+o.price+'</div>';
+      else if(o.listingType==='free') ghtml += '<div class="mat-price" style="color:var(--green)">Free</div>';
+      else if(o.listingType==='swap') ghtml += '<div class="mat-price" style="color:var(--green);font-size:13px">Swap</div>';
+      else if(o.listingType==='wanted') ghtml += '<div class="mat-price" style="color:var(--muted);font-size:13px">🔍 Szukam</div>';
+      else ghtml += '<div></div>';
+      if(certs.length) ghtml += '<div class="mat-certs">'+certs.map(function(c){return '<span class="mat-cert">'+c+'</span>';}).join('')+'</div>';
+      ghtml += '</div>';
+      ghtml += '</div></div>';
+    });
+    ghtml += '</div>';
+    document.getElementById('materialy-grid').innerHTML = ghtml;
+    document.getElementById('load-more-wrap').style.display = paged.length<total ? '' : 'none';
+    return;
+  }
+
+  // ── LOKALE mode ──
+  document.getElementById('materialy-grid').style.display = 'none';
+  document.getElementById('results-list').style.display = '';
+  var catName = currentCat==='all' ? 'all venues' : (CAT_LABEL[currentCat]||currentCat);
+  document.getElementById('results-heading').textContent = 'Warszawa: '+catName;
+  document.getElementById('results-sub').textContent = total+' results';
+
+  var html = '';
+
+  // Sponsored
+  if (currentCat==='all'||currentCat==='sorting') {
+    html += '<div class="sponsored-result" onclick=""><span class="sponsored-tag">Ad</span>';
+    html += '<div class="rc-thumb" style="width:160px;min-height:110px;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex-shrink:0"><span style="font-family:Syne,sans-serif;font-size:12px;font-weight:700;color:rgba(245,240,232,.6);letter-spacing:.1em">BRAND XYZ</span><span style="font-family:Syne,sans-serif;font-size:15px;font-weight:800;color:var(--cream);text-align:center;line-height:1.2">New Spring<br>Summer</span></div>';
+    html += '<div class="rc-body"><div class="rc-main">';
+    html += '<div style="font-family:Syne,sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Brand XYZ</div>';
+    html += '<div class="rc-name" style="color:var(--ink)">New Spring Summer Collection</div>';
+    html += '<div class="rc-meta">Made in Poland</div>';
+    html += '<div class="rc-desc">Crafted from natural fabrics by Polish workshops. Discover the new face of the brand.</div>';
+    html += '</div><div class="rc-right"><div></div><div class="rc-price-block"></div><button class="rc-cta" style="margin-top:auto">Shop Online</button></div></div></div>';
+  }
+
+  paged.forEach(function(e) {
+    // VIVE shown as normal card (XYZ is the sponsored slot)
+    var emoji = CAT_EMOJI[e.cat]||'📍';
+    var ratingLabel = getRatingLabel(e.rating);
+
+    html += '<div class="result-card" onclick="selectEntry(\''+e.id+'\')">';
+    html += '<div class="rc-thumb">';
+    if (PLACE_PHOTOS[e.id]) html += '<img src="'+PLACE_PHOTOS[e.id]+'" alt="">';
+    else html += emoji;
+    html += '<button class="rc-fav" onclick="event.stopPropagation()" title="Save">♡</button>';
+    html += '</div>';
+
+    html += '<div class="rc-body"><div class="rc-main">';
+    html += '<div class="rc-badges"><span class="badge '+(CAT_BADGE[e.cat]||'')+'">'+CAT_LABEL[e.cat]+'</span></div>';
+    html += '<div class="rc-name">'+e.name+'</div>';
+    html += '<div class="rc-meta">'+e.addr;
+    if(e.hours) html += '<span class="rc-meta-sep">·</span>'+e.hours;
+    html += '</div>';
+    if(e.notes) html += '<div class="rc-desc">'+e.notes+'</div>';
+    html += '</div>';
+
+    html += '<div class="rc-right">';
+    if(e.rating) {
+      html += '<div class="rc-rating-block"><div style="text-align:right"><div class="rc-rating-label">'+ratingLabel+'</div><div class="rc-reviews">'+e.reviews+' reviews</div></div><div class="rc-rating-num">'+e.rating.toFixed(1)+'</div></div>';
+    } else { html += '<div></div>'; }
+    html += '<div class="rc-price-block"></div>';
+    html += '<button class="rc-cta">See details</button>';
+    html += '</div>';
+
+    html += '</div></div>';
+  });
+
+  document.getElementById('results-list').innerHTML = html;
+  document.getElementById('load-more-wrap').style.display = paged.length<total ? '' : 'none';
+  if(currentView==='map') renderMapList('');
+}
+
+function loadMore() { currentPage++; renderResults(); }
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('map-full').classList.toggle('active', v==='map');
+  if(v==='map') {
+    document.body.style.overflow='hidden';
+    if(!mapInitialized) {
+      mapInitialized=true;
+      setTimeout(initLeafletMap, 50);
+    } else if(map) {
+      map.invalidateSize();
+      renderMapCatFilters();
+      renderMapList('');
+    }
+  } else { document.body.style.overflow=''; }
+}
+
+function initLeafletMap() {
+  map = L.map('map-leaflet', {zoomControl: false}).setView([52.2297,21.0122],12);
+  L.control.zoom({position:'topright'}).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+  DB.forEach(function(e){ addMapMarker(e); });
+  updateMapMarkers();
+  renderMapCatFilters();
+  renderMapList('');
+}
+
+function makeSvgIcon(color,size) {
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+size+'" height="'+size+'" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="'+color+'" stroke="white" stroke-width="1.5"/></svg>';
+  return 'data:image/svg+xml;base64,'+btoa(svg);
+}
+
+function addMapMarker(e) {
+  var color=CAT_COLOR[e.cat]||'#888';
+  var size=e.cat==='offer'?18:13;
+  var icon=L.icon({iconUrl:makeSvgIcon(color,size),iconSize:[size,size],iconAnchor:[size/2,size/2],popupAnchor:[0,-size/2]});
+  var popup='<div class="popup-name">'+e.name+'</div><div class="popup-cat">'+(CAT_LABEL[e.cat]||e.cat)+'</div><div class="popup-addr">'+e.addr+'</div><button class="popup-btn" onclick="selectEntry(\''+e.id+'\')">See details</button>';
+  var marker=L.marker([e.lat,e.lng],{icon:icon}).addTo(map).bindPopup(popup);
+  marker.on('click',function(){selectEntry(e.id);});
+  leafletMarkers[e.id]=marker;
+}
+
+function updateMapMarkers() {
+  DB.forEach(function(e) {
+    var m = leafletMarkers[e.id];
+    if (!m) return;
+    var modeMatch = currentMode==='lokale' ? e.cat!=='offer' : e.cat==='offer';
+    var catMatch = mapCatFilter==='all' ? true
+      : currentMode==='lokale' ? e.cat===mapCatFilter
+      : e.offer && e.offer.listingType===mapCatFilter;
+    if (modeMatch && catMatch) {
+      if (!map.hasLayer(m)) m.addTo(map);
+    } else {
+      if (map.hasLayer(m)) map.removeLayer(m);
+    }
+  });
+}
+
+function renderMapCatFilters() {
+  var el = document.getElementById('map-cat-filters');
+  if (!el) return;
+  var lokaleCATS = [
+    {key:'sorting',   label:'Sorting',      color:'#3a6b4a'},
+    {key:'fabric',    label:'Fabrics',      color:'#185FA5'},
+    {key:'haberdashery', label:'Haberdashery', color:'#534AB7'},
+    {key:'krawcy',    label:'Tailors',       color:'#d4488a'},
+    {key:'szewcy',    label:'Cobblers',      color:'#e67e22'},
+    {key:'kaletnicy', label:'Leather',       color:'#8e44ad'},
+    {key:'hurtownie', label:'Wholesalers',   color:'#16a085'},
+    {key:'technicy',  label:'Machine Repair', color:'#2980b9'},
+    {key:'szwalnie',  label:'Workshops',     color:'#27ae60'},
+    {key:'producenci_tkanin', label:'Fabric Producers', color:'#7f8c8d'},
+    {key:'drukarnie', label:'Printers',      color:'#c0392b'},
+    {key:'designer',  label:'Designers',     color:'#993556'},
+    {key:'producer',  label:'Producers',     color:'#856404'}  ];
+  var matCATS = [
+    {key:'sell',   label:'For sale',  color:'#c8553d'},
+    {key:'swap',   label:'Swap',      color:'#3a6b4a'},
+    {key:'free',   label:'Free',     color:'#3a6b4a'},
+    {key:'wanted', label:'Wanted',  color:'#888888'}
+  ];
+  var cats = currentMode==='materialy' ? matCATS : lokaleCATS;
+  var allActive = mapCatFilter==='all';
+  var html = '<button class="map-cat-chip'+(allActive?' active':'')+'" '
+    +(allActive?'style="background:var(--ink);border-color:var(--ink)"':'')+' onclick="setMapCatFilter(\'all\')">All</button>';
+  html += cats.map(function(c) {
+    var on = mapCatFilter===c.key;
+    return '<button class="map-cat-chip'+(on?' active':'')+'" '
+      +(on?'style="background:'+c.color+';border-color:'+c.color+'"':'')+' onclick="setMapCatFilter(\''+c.key+'\')">'
+      +'<span class="chip-dot" style="background:'+c.color+'">'+'</span>'+c.label+'</button>';
+  }).join('');
+  el.innerHTML = html;
+}
+
+function setMapCatFilter(key) {
+  mapCatFilter = key;
+  renderMapCatFilters();
+  updateMapMarkers();
+  var inp = document.getElementById('map-search-input');
+  renderMapList(inp ? inp.value : '');
+}
+
+function renderMapList(q) {
+  q=(q||'').toLowerCase();
+  var filtered=DB.filter(function(e){
+    if (currentMode==='lokale' && e.cat==='offer') return false;
+    if (currentMode==='materialy' && e.cat!=='offer') return false;
+    if (mapCatFilter!=='all') {
+      if (currentMode==='lokale' && e.cat!==mapCatFilter) return false;
+      if (currentMode==='materialy' && (!e.offer||e.offer.listingType!==mapCatFilter)) return false;
+    }
+    if(!q) return true;
+    return e.name.toLowerCase().indexOf(q)>=0||e.addr.toLowerCase().indexOf(q)>=0;
+  });
+  document.getElementById('map-count').textContent=filtered.length+' results';
+  document.getElementById('map-sidebar-list').innerHTML=filtered.map(function(e){
+    var ratingHtml=e.rating?'<span class="ml-rating">★ '+e.rating.toFixed(1)+'</span>':'';
+    var priceHtml='';
+    if(e.offer&&e.offer.price) priceHtml='<span class="ml-price">'+e.offer.price+'</span>';
+    else if(e.offer&&e.offer.listingType==='free') priceHtml='<span class="ml-price" style="color:var(--green)">Free</span>';
+    return '<div class="map-list-item'+(selectedId===e.id?' sel':'')+'" id="mli-'+e.id+'" onclick="selectEntry(\''+e.id+'\')">' +
+      '<div class="ml-name">'+e.name+'</div>' +
+      '<div class="ml-addr">'+e.addr+'</div>' +
+      '<div class="ml-foot">'+ratingHtml+priceHtml+
+      '<span style="font-size:11px;color:var(--muted);margin-left:auto">'+CAT_LABEL[e.cat]+'</span></div></div>';
+  }).join('');
+}
+
+function selectEntry(id) {
+  selectedId=id;
+  var e=DB.find(function(x){return x.id===id;});
+  if(!e) return;
+  if(currentView==='map'&&map) {
+    map.setView([e.lat,e.lng],15,{animate:true});
+    if(leafletMarkers[id]) leafletMarkers[id].openPopup();
+    renderMapList('');
+    var el=document.getElementById('mli-'+id);
+    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  openDetail(e);
+}
+
+function openDetail(e) {
+  var isOffer=e.cat==='offer'&&e.offer;
+  document.getElementById('dp-name').textContent=e.name;
+  document.getElementById('dp-badges').innerHTML='<span class="badge '+(CAT_BADGE[e.cat]||'')+'">'+CAT_LABEL[e.cat]+'</span>'+(e.secondhand?'<span class="badge b-secondhand">Secondhand</span>':'');
+  var html='';
+  var ltypes={sell:'For sale',swap:'Swap',free:'Free',wanted:'Wanted'};
+
+  if(isOffer) {
+    var o=e.offer;
+    if(OFFER_PHOTOS[e.id]) html+='<img class="dp-photo" src="'+OFFER_PHOTOS[e.id]+'" alt="">';
+    html+='<div class="dp-section"><div class="dp-sec-title">Material</div>';
+    if(o.material) html+='<div class="dp-row"><span class="dp-label">Typ</span><span class="dp-value">'+o.material+'</span></div>';
+    if(o.gsm) html+='<div class="dp-row"><span class="dp-label">GSM</span><span class="dp-value">'+o.gsm+'</span></div>';
+    if(o.composition) html+='<div class="dp-row"><span class="dp-label">Composition</span><span class="dp-value">'+o.composition+'</span></div>';
+    if(o.origin) html+='<div class="dp-row"><span class="dp-label">Origin</span><span class="dp-value">'+o.origin+'</span></div>';
+    if(o.colour) html+='<div class="dp-row"><span class="dp-label">Colour</span><span class="dp-value">'+o.colour+'</span></div>';
+    if(o.certs&&o.certs.length) html+='<div class="dp-row"><span class="dp-label">Certs.</span><div>'+o.certs.map(function(c){return '<span class="cert-pill'+(c==='Brak'?' none':'')+'">'+c+'</span>';}).join('')+'</div></div>';
+    if(o.dpp) html+='<div class="dp-row"><span class="dp-label">DPP No.</span><span class="dp-value" style="font-size:11px">'+o.dpp+'</span></div>';
+    html+='</div>';
+    html+='<div class="dp-section"><div class="dp-sec-title">Dimensions</div>';
+    if(o.width) html+='<div class="dp-row"><span class="dp-label">Width</span><span class="dp-value">'+o.width+'</span></div>';
+    if(o.length) html+='<div class="dp-row"><span class="dp-label">Length</span><span class="dp-value">'+o.length+'</span></div>';
+    if(o.weight) html+='<div class="dp-row"><span class="dp-label">Waga</span><span class="dp-value">'+o.weight+'</span></div>';
+    if(o.qty) html+='<div class="dp-row"><span class="dp-label">Quantity</span><span class="dp-value">'+o.qty+'</span></div>';
+    html+='</div>';
+    html+='<div class="dp-section"><div class="dp-sec-title">Oferta</div>';
+    html+='<div class="dp-row"><span class="dp-label">Typ</span><span class="dp-value">'+(ltypes[o.listingType]||o.listingType)+'</span></div>';
+    if(o.price) html+='<div class="dp-row"><span class="dp-label">Price</span><span class="dp-value" style="font-family:\'Syne\',sans-serif;font-size:17px;font-weight:800;color:var(--accent)">'+o.price+'</span></div>';
+    if(o.swap) html+='<div class="dp-row"><span class="dp-label">Swap for</span><span class="dp-value" style="font-style:italic;font-size:12px">'+o.swap+'</span></div>';
+    html+='</div>';
+    if(o.desc) html+='<div class="dp-section"><div class="dp-sec-title">Description</div><div class="dp-notes">'+o.desc+'</div></div>';
+    if(o.contact) html+='<div class="dp-section"><div class="dp-sec-title">Contact</div><div style="font-weight:600;font-size:14px;color:var(--green)">'+o.contact+'</div></div>';
+    if(o.listingType!=='wanted') html+='<button class="dp-cta">Get in touch ze sprzedającym</button>';
+  } else {
+    if(PLACE_PHOTOS[e.id]) html+='<img class="dp-photo" src="'+PLACE_PHOTOS[e.id]+'" alt="'+e.name+'">';
+    html+='<div class="dp-section"><div class="dp-sec-title">Location</div>';
+    html+='<div class="dp-row"><span class="dp-label">Adres</span><span class="dp-value">'+e.addr+'</span></div>';
+    if(e.hours) html+='<div class="dp-row"><span class="dp-label">Godziny</span><span class="dp-value">'+e.hours+'</span></div>';
+    if(e.phone) html+='<div class="dp-row"><span class="dp-label">Phone</span><span class="dp-value"><a href="tel:'+e.phone+'" style="color:var(--green);font-weight:600">'+e.phone+'</a></span></div>';
+    html+='</div>';
+    if(e.rating) {
+      html+='<div class="dp-section"><div class="dp-sec-title">Rating</div>';
+      html+='<div class="dp-row"><span class="dp-label">Wynik</span><span class="dp-value" style="font-family:\'Syne\',sans-serif;font-size:20px;font-weight:800">'+e.rating.toFixed(1)+' <span style="font-size:12px;font-weight:400;color:var(--muted)">/5.0</span></span></div>';
+      html+='<div class="dp-row"><span class="dp-label">Recenzje</span><span class="dp-value">'+e.reviews+' reviews</span></div>';
+      html+='<div class="dp-row"><span class="dp-label">Rating</span><span class="dp-value">'+getRatingLabel(e.rating)+'</span></div>';
+      html+='</div>';
+    }
+    if(e.notes) html+='<div class="dp-section"><div class="dp-sec-title">Notes</div><div class="dp-notes">'+e.notes+'</div></div>';
+    if(e.phone) html+='<button class="dp-cta" onclick="window.location.href=\'tel:'+e.phone+'\'">📞 Call now</button>';
+  }
+  document.getElementById('dp-body').innerHTML=html;
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+function closeDetail() { document.getElementById('detail-overlay').classList.remove('open'); selectedId=null; }
+function handleOverlayClick(e) { if(e.target===document.getElementById('detail-overlay')) closeDetail(); }
+function openModal() { document.getElementById('overlay').classList.add('open'); }
+function closeModal() { document.getElementById('overlay').classList.remove('open'); resetPhotos(); }
+function overlayClick(e) { if(e.target===document.getElementById('overlay')) closeModal(); }
+
+document.addEventListener('change',function(e) {
+  if(e.target.id==='fm-material') {
+    var wrap=document.getElementById('fm-material-other-wrap');
+    wrap.style.display=e.target.value==='Other'?'block':'none';
+    if(e.target.value!=='Other') document.getElementById('fm-material-other').value='';
+  }
+  if(e.target.name==='rt') {
+    document.querySelectorAll('.r-opt').forEach(function(o){o.classList.remove('on');});
+    e.target.parentElement.classList.add('on');
+    var v=e.target.value;
+    document.getElementById('price-row').style.display=(v==='sell'||v==='free')?'grid':'none';
+    document.getElementById('swap-row').style.display=v==='swap'?'block':'none';
+  }
+});
+
+var uploadedPhotos=[];
+function handlePhotos(files) {
+  var remaining=5-uploadedPhotos.length;
+  for(var i=0;i<Math.min(files.length,remaining);i++) {
+    (function(file){var r=new FileReader();r.onload=function(ev){uploadedPhotos.push({file:file,dataUrl:ev.target.result});renderPreviews();};r.readAsDataURL(file);})(files[i]);
+  }
+}
+function renderPreviews() {
+  document.getElementById('photo-previews').innerHTML=uploadedPhotos.map(function(p,i){
+    return '<div class="photo-thumb"><img src="'+p.dataUrl+'" alt=""><button class="photo-thumb-del" onclick="removePhoto('+i+')">✕</button></div>';
+  }).join('');
+}
+function removePhoto(idx){uploadedPhotos.splice(idx,1);renderPreviews();}
+function photoDragOver(e){e.preventDefault();document.getElementById('photo-drop').classList.add('drag-over');}
+function photoDrop(e){e.preventDefault();document.getElementById('photo-drop').classList.remove('drag-over');handlePhotos(e.dataTransfer.files);}
+function resetPhotos(){uploadedPhotos=[];renderPreviews();document.getElementById('fm-photos').value='';}
+
+function submitOffer() {
+  var title=document.getElementById('fm-title').value.trim();
+  var materialRaw=document.getElementById('fm-material').value;
+  var material=materialRaw==='Other'?(document.getElementById('fm-material-other').value.trim()||'Other'):materialRaw;
+  var addr=document.getElementById('fm-addr').value.trim();
+  if(!title||!material||!addr){showToast('Please fill required fields (title, material, address)',true);return;}
+  var certs=[];
+  document.querySelectorAll('.certs input:checked').forEach(function(c){certs.push(c.value);});
+  var lt=document.querySelector('input[name="rt"]:checked').value;
+  var price=document.getElementById('fm-price').value;
+  var per=document.getElementById('fm-per').value;
+  var id='u'+Date.now();
+  var jitter=function(){return (Math.random()-.5)*.04;};
+  var newE={id:id,cat:'offer',name:title,addr:addr,hours:null,phone:null,rating:null,reviews:null,
+    notes:material+(lt==='swap'?' — zamiana':lt==='free'?' — za darmo':''),secondhand:(lt==='swap'||lt==='free'),
+    lat:52.2297+jitter(),lng:21.0122+jitter(),
+    offer:{material:material,gsm:document.getElementById('fm-gsm').value?document.getElementById('fm-gsm').value+' g/m²':null,
+      gsmClass:document.getElementById('fm-gsm-class').value||null,photos:uploadedPhotos.map(function(p){return p.dataUrl;}),
+      composition:document.getElementById('fm-comp').value.trim(),origin:document.getElementById('fm-origin').value.trim(),
+      colour:document.getElementById('fm-colour').value.trim(),certs:certs.length?certs:['Brak'],
+      dpp:document.getElementById('fm-dpp').value.trim(),
+      width:document.getElementById('fm-w').value?(document.getElementById('fm-w').value+' cm'):null,
+      length:document.getElementById('fm-l').value?(document.getElementById('fm-l').value+' m'):null,
+      weight:document.getElementById('fm-wt').value?(document.getElementById('fm-wt').value+' kg'):null,
+      qty:document.getElementById('fm-qty').value.trim(),listingType:lt,
+      price:(lt==='sell'&&price)?price+' PLN '+per:null,
+      swap:document.getElementById('fm-swap').value.trim(),
+      desc:document.getElementById('fm-desc').value.trim(),
+      contact:document.getElementById('fm-contact').value.trim()}};
+  DB.push(newE);
+  if(mapInitialized&&map) addMapMarker(newE);
+  closeModal(); renderResults(); showToast('Listing published!');
+  setTimeout(function(){selectEntry(id);},350);
+}
+
+function showToast(msg,err) {
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(err?' err':''); t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},3000);
+}
+
+renderSidebarFilters();
+renderResults();
+</script>
+</body>
+</html>
